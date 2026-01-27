@@ -7,7 +7,6 @@ import {
     LiteModels,
     RegularModels,
 } from "./config.types";
-import { env } from 'cloudflare:workers';
 
 //======================================================================================
 // COMMON CONFIGS - Shared across all configurations
@@ -287,27 +286,10 @@ const PREMIUM_AGENT_CONFIG: AgentConfig = {
 
 //======================================================================================
 // CONFIG SELECTION
-// Set AGENT_CONFIG_MODE in wrangler.jsonc vars to switch:
-// "AGENT_CONFIG_MODE": "balanced" | "budget" | "premium"
+// To switch configs, change BALANCED_AGENT_CONFIG to:
+// BUDGET_AGENT_CONFIG or PREMIUM_AGENT_CONFIG
 //======================================================================================
-type ConfigMode = 'balanced' | 'budget' | 'premium';
-
-function getAgentConfig(): AgentConfig {
-    const mode = (env.AGENT_CONFIG_MODE as ConfigMode) || 'balanced';
-    
-    switch (mode) {
-        case 'budget':
-            return BUDGET_AGENT_CONFIG;
-        case 'premium':
-            return PREMIUM_AGENT_CONFIG;
-        case 'balanced':
-        default:
-            return BALANCED_AGENT_CONFIG;
-    }
-}
-
-export const AGENT_CONFIG: AgentConfig = getAgentConfig();
-
+export const AGENT_CONFIG: AgentConfig = BALANCED_AGENT_CONFIG;
 
 export const AGENT_CONSTRAINTS: Map<AgentActionKey, AgentConstraintConfig> = new Map([
     ['fastCodeFixer', {
