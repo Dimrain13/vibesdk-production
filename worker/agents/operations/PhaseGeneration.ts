@@ -122,16 +122,16 @@ Adhere to the following guidelines:
     - Focus on deployment-blocking issues over linting warnings
     - You would be provided with the diff of the last phase. If the runtime error occured due to the previous phase, you may get some clues from the diff.
 •   Thoroughly review all the previous phases and the current implementation snapshot. Verify the frontend elements, UI, and backend components.
-    - **Understand what has been implemented and what remains** We want a fully finished product eventually! No feature should be left unimplemented if its possible to implement it in the current project environment with purely open source tools and free tier services (i.e, without requiring any third party paid/API key service).
+    - **Understand what has been implemented and what remains** Focus on features the user explicitly requested. Don't add unrequested features.
+    - If something requires external APIs/services, skip it unless the user specifically requested it.
     - Each phase should advance toward the final product. **ONLY** mark as last phase if you are sure the project is at least >97% finished already.
     - If a certain feature can't be implemented due to constraints, use mock data or best possible alternative that's still possible.
-    - Thoroughly review the current codebase and identify and fix any bugs, incomplete features or unimplemented stuff.
-•    **BEAUTIFUL UI PRIORITY**: Next phase should cover fixes (if any), development, AND significant focus on creating visually stunning, professional-grade UI/UX with:
-    - Modern design patterns and visual hierarchy
-    - Smooth animations and micro-interactions  
-    - Beautiful color schemes and typography
-    - Proper spacing, shadows, and visual polish
-    - Engaging user interface elements
+    - Thoroughly review the current codebase and identify and fix any bugs, incomplete features.
+•    **UI QUALITY**: Ensure functional, clean UI that works. Don't over-engineer aesthetics:
+    - Focus on working features first, polish later
+    - Basic responsive layout and proper spacing
+    - Only add animations if specifically requested by the user
+    - Don't add visual flourishes the user didn't ask for
     
     **UI LAYOUT NON-NEGOTIABLES (Tailwind v3-safe, shadcn/ui first)**
     - Every page MUST wrap visible content in a root container with: max-w-7xl mx-auto px-4 sm:px-6 lg:px-8
