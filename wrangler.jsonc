@@ -149,7 +149,6 @@
         "ALLOWED_EMAIL": "daniel.r.millner@gmail.com",
         "DISPATCH_NAMESPACE": "vibesdk-default-namespace",
         "ENABLE_READ_REPLICAS": "true",
-        "AGENT_CONFIG_MODE": "balanced",
         "CLOUDFLARE_AI_GATEWAY": "vibesdk-gateway",
         "PLATFORM_CAPABILITIES": {
             "features": {

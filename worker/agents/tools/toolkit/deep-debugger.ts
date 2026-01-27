@@ -24,9 +24,9 @@ export function createDeepDebuggerTool(
 	return tool({
 		name: 'deep_debug',
 		description:
-			'Autonomous debugging assistant for ACTIVE BUGS ONLY. Use ONLY when user reports a specific error message or says something is broken/not working. DO NOT use for: questions about code, feature requests, general discussions, or vague complaints without error details. Ask for specifics first if unclear. CANNOT run during code generation. LIMITED TO ONE CALL PER TURN.',
+			'Autonomous debugging assistant that investigates errors, reads files, and applies fixes. CANNOT run during code generation - will return GENERATION_IN_PROGRESS error if generation is active. LIMITED TO ONE CALL PER CONVERSATION TURN.',
 		args: {
-			issue: t.string().describe('Description of the issue to debug - must include specific error message or symptom'),
+			issue: t.string().describe('Description of the issue to debug'),
 			focus_paths: focusPathsType.describe('Optional array of file paths to focus debugging on'),
 		},
 		run: async ({ issue, focus_paths }) => {

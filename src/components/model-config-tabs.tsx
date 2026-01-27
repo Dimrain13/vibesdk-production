@@ -1,22 +1,14 @@
 import { useState, useCallback } from 'react';
-import { Search, RotateCcw, Play, Settings, Sparkles } from 'lucide-react';
+import { Search, RotateCcw, Play, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { toast } from 'sonner';
 import { ConfigCard } from './config-card';
 import { ConfigModal } from './config-modal';
 import { categorizeAgent } from '@/utils/model-helpers';
 import { WORKFLOW_TABS } from '@/lib/constants/workflow-tabs';
-import { CONFIG_PRESETS, type PresetName } from '@/lib/config-presets';
 import type {
   ModelConfig,
   UserModelConfigWithMetadata,
@@ -53,37 +45,6 @@ export function ModelConfigTabs({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedConfigKey, setSelectedConfigKey] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [applyingPreset, setApplyingPreset] = useState(false);
-
-  // Handle applying a preset to all configs
-  const handleApplyPreset = async (presetName: PresetName) => {
-    const preset = CONFIG_PRESETS.find(p => p.name === presetName);
-    if (!preset) return;
-
-    setApplyingPreset(true);
-    let successCount = 0;
-    let errorCount = 0;
-
-    try {
-      for (const [agentKey, config] of Object.entries(preset.configs)) {
-        try {
-          await onSaveConfig(agentKey, config);
-          successCount++;
-        } catch (error) {
-          console.error(`Failed to apply preset to ${agentKey}:`, error);
-          errorCount++;
-        }
-      }
-
-      if (errorCount === 0) {
-        toast.success(`Applied "${preset.label}" preset to ${successCount} configurations`);
-      } else {
-        toast.warning(`Applied preset: ${successCount} succeeded, ${errorCount} failed`);
-      }
-    } finally {
-      setApplyingPreset(false);
-    }
-  };
 
   // Filter agent configs by search term
   const filteredAgentConfigs = agentConfigs.filter(config =>
@@ -163,26 +124,6 @@ export function ModelConfigTabs({
         </div>
         
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          {/* Preset Selector */}
-          <Select onValueChange={(value) => handleApplyPreset(value as PresetName)} disabled={applyingPreset}>
-            <SelectTrigger className="w-full sm:w-48 dark:bg-bg-1 bg-bg-4">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4" />
-                <SelectValue placeholder="Apply Preset..." />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              {CONFIG_PRESETS.map((preset) => (
-                <SelectItem key={preset.name} value={preset.name}>
-                  <div className="flex flex-col">
-                    <span className="font-medium">{preset.label}</span>
-                    <span className="text-xs text-text-tertiary">{preset.description}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-text-tertiary" />
