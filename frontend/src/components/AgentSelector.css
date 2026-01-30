@@ -1,0 +1,33 @@
+.agent-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-selector label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.agent-dropdown {
+  background: var(--tertiary-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 6px 12px;
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+  min-width: 200px;
+}
+
+.agent-dropdown:hover {
+  border-color: var(--accent-blue);
+}
+
+.agent-dropdown:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2);
+}
