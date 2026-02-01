@@ -19,6 +19,15 @@ import { createGetRuntimeErrorsTool } from './toolkit/get-runtime-errors';
 import { createWaitForGenerationTool } from './toolkit/wait-for-generation';
 import { createWaitForDebugTool } from './toolkit/wait-for-debug';
 import { createGitTool } from './toolkit/git';
+// E1-style tools
+import { createTestingAgentTool } from './toolkit/testing-agent';
+import { createIntegrationPlaybookTool } from './toolkit/integration-playbook';
+import { createDesignAgentTool } from './toolkit/design-agent';
+import { createTroubleshootAgentTool } from './toolkit/troubleshoot-agent';
+import { createSupportAgentTool } from './toolkit/support-agent';
+import { createCrawlTool } from './toolkit/crawl-tool';
+import { createAskHumanTool } from './toolkit/ask-human';
+import { createFinishTool } from './toolkit/finish-tool';
 import { ICodingAgent } from '../services/interfaces/ICodingAgent';
 import { Message } from '../inferutils/common';
 import { ChatCompletionMessageFunctionToolCall } from 'openai/resources';
@@ -59,6 +68,15 @@ export function buildTools(
         createGitTool(agent, logger, { excludeCommands: ['reset'] }),
         // Deep autonomous debugging assistant tool
         createDeepDebuggerTool(agent, logger, toolRenderer, streamCb),
+        // E1-style tools
+        createTestingAgentTool(agent, logger, toolRenderer, streamCb),
+        createIntegrationPlaybookTool(agent, logger, toolRenderer, streamCb),
+        createDesignAgentTool(agent, logger, toolRenderer, streamCb),
+        createTroubleshootAgentTool(agent, logger, toolRenderer, streamCb),
+        createSupportAgentTool(logger, toolRenderer, streamCb),
+        createCrawlTool(logger, toolRenderer, streamCb),
+        createAskHumanTool(logger, toolRenderer, streamCb),
+        createFinishTool(logger, toolRenderer, streamCb),
     ];
 }
 
