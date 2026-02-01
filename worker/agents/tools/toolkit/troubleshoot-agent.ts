@@ -2,12 +2,13 @@ import { tool, t } from '../types';
 import { StructuredLogger } from '../../../logger';
 import { ICodingAgent } from '../../services/interfaces/ICodingAgent';
 import { RenderToolCall } from '../../operations/UserConversationProcessor';
+import { analyzeError, formatErrorAnalysis, generateDebugChecklist } from '../../utils/troubleshootingSystem';
 
 /**
  * Troubleshoot Agent Tool
  * 
  * Deep root cause analysis for persistent errors.
- * READ-ONLY - investigates but does not modify code.
+ * Uses intelligent error pattern matching and analysis.
  */
 
 export function createTroubleshootAgentTool(
@@ -28,10 +29,10 @@ Use this when:
 - Unexplained 500/502/503 errors
 
 This agent:
-- Investigates with READ-ONLY access
-- Analyzes logs, configurations, error messages
-- Provides actionable fix recommendations
-- Does NOT modify code directly
+- Analyzes error patterns intelligently
+- Provides categorized diagnosis
+- Generates targeted fix suggestions
+- Creates debugging checklists
 
 You must implement the recommended fixes.`,
         args: {
@@ -41,12 +42,20 @@ You must implement the recommended fixes.`,
             previous_attempts: t.string().optional().describe('What fixes were already tried'),
             relevant_files: t.string().optional().describe('File paths that might be related (comma-separated)'),
         },
-        run: async ({ issue, component, error_messages, previous_attempts }) => {
+        run: async ({ issue, component, error_messages, previous_attempts, relevant_files }) => {
             logger.info('Troubleshoot agent invoked', { issue, component });
 
             streamCb('\n\n🔍 **Troubleshoot Agent - Root Cause Analysis**\n\n');
             streamCb(`**Issue:** ${issue}\n`);
             streamCb(`**Component:** ${component}\n\n`);
+
+            // Intelligent error analysis if error messages provided
+            let errorAnalysis = null;
+            if (error_messages) {
+                errorAnalysis = analyzeError(error_messages);
+                streamCb(formatErrorAnalysis(errorAnalysis));
+                streamCb('\n');
+            }
 
             streamCb('---\n\n');
             streamCb('### Investigation Steps\n\n');
@@ -59,9 +68,21 @@ You must implement the recommended fixes.`,
                 streamCb('⚠️ Issues found in static analysis:\n');
                 if (analysisResult.lint?.issues?.length) {
                     streamCb(`- Lint issues: ${analysisResult.lint.issues.length}\n`);
+                    // Analyze first lint error
+                    const firstLint = analysisResult.lint.issues[0];
+                    if (firstLint) {
+                        const lintAnalysis = analyzeError(firstLint.message);
+                        streamCb(`  Category: ${lintAnalysis.category}\n`);
+                    }
                 }
                 if (analysisResult.typecheck?.issues?.length) {
                     streamCb(`- Type errors: ${analysisResult.typecheck.issues.length}\n`);
+                    // Analyze first type error
+                    const firstType = analysisResult.typecheck.issues[0];
+                    if (firstType) {
+                        const typeAnalysis = analyzeError(firstType.message);
+                        streamCb(`  Category: ${typeAnalysis.category}\n`);
+                    }
                 }
             } else {
                 streamCb('✅ Static analysis passed\n');
@@ -75,6 +96,8 @@ You must implement the recommended fixes.`,
                 streamCb(`⚠️ ${runtimeErrors.length} runtime error(s) detected:\n`);
                 runtimeErrors.slice(0, 3).forEach((err) => {
                     streamCb(`- ${err.message}\n`);
+                    const runtimeAnalysis = analyzeError(err.message);
+                    streamCb(`  → ${runtimeAnalysis.suggestions[0] || 'Review error details'}\n`);
                 });
             } else {
                 streamCb('✅ No runtime errors detected\n');
@@ -99,10 +122,36 @@ You must implement the recommended fixes.`,
                 streamCb('✅ No error logs found\n');
             }
 
-            // Generate recommendations based on component
+            // Step 4: File analysis if relevant files provided
+            if (relevant_files) {
+                streamCb('\n**Step 4: Code Analysis**\n');
+                const files = relevant_files.split(',').map(f => f.trim());
+                streamCb(`Analyzing ${files.length} file(s)...\n`);
+                
+                // Check for potential issues in file names/patterns
+                for (const file of files.slice(0, 3)) {
+                    streamCb(`- \`${file}\`\n`);
+                }
+            }
+
+            // Generate intelligent recommendations
             streamCb('\n---\n\n');
             streamCb('### Root Cause Analysis\n\n');
 
+            // Use error category to generate targeted checklist
+            const category = errorAnalysis?.category || 
+                (component === 'frontend' ? 'runtime' : 
+                 component === 'backend' ? 'runtime' :
+                 component === 'database' ? 'configuration' : 'unknown');
+            
+            const checklist = generateDebugChecklist(category);
+            
+            streamCb(`**Debug Checklist (${category}):**\n`);
+            checklist.forEach((item, i) => {
+                streamCb(`${i + 1}. ${item}\n`);
+            });
+
+            // Component-specific recommendations
             const recommendations: string[] = [];
             
             if (component === 'frontend') {

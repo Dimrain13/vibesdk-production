@@ -337,6 +337,15 @@ export function useChat({
 						document.addEventListener(event, updateActivity, { passive: true });
 					});
 
+					// Handle tab visibility changes - reset timer when tab becomes visible
+					const handleVisibilityChange = () => {
+						if (document.visibilityState === 'visible') {
+							updateActivity();
+							logger.debug('📱 Tab visible - activity timer reset');
+						}
+					};
+					document.addEventListener('visibilitychange', handleVisibilityChange);
+
 					// Start ping interval to keep connection alive (every 30 seconds)
 					// But only if there's been recent user activity
 					const pingInterval = setInterval(() => {
@@ -371,6 +380,7 @@ export function useChat({
 						activityEvents.forEach(event => {
 							document.removeEventListener(event, updateActivity);
 						});
+						document.removeEventListener('visibilitychange', handleVisibilityChange);
 					}, { once: true });
 
 					// Send success message to user

@@ -126,14 +126,14 @@ export const WebSocketMessageRequests = {
 
 export const PREVIEW_EXPIRED_ERROR = 'Preview expired, attempting redeploy. Please try again after a minute or refresh the page';
 export const MAX_DEPLOYMENT_RETRIES = 5;
-export const MAX_LLM_MESSAGES = 200;
-export const MAX_TOOL_CALLING_DEPTH_DEFAULT = 7;
+export const MAX_LLM_MESSAGES = 300;
+export const MAX_TOOL_CALLING_DEPTH_DEFAULT = 15;
 export const getMaxToolCallingDepth = (agentActionKey: AgentActionKey | 'testModelConfig') => {
     switch (agentActionKey) {
         case 'deepDebugger':
-            return 40;
+            return 60;
         case 'agenticProjectBuilder':
-            return 100;
+            return 150;
         default:
             return MAX_TOOL_CALLING_DEPTH_DEFAULT;
     }

@@ -168,26 +168,25 @@ For specific billing questions, contact platform support directly.`,
 
     'limitations': {
         category: 'capabilities',
-        answer: `**Current Limitations:**
+        answer: `**Platform Guidance:**
 
-**What I Cannot Do:**
-- Store/manage API keys directly
-- Access external databases without credentials
-- Modify wrangler.jsonc or package.json
-- Download entire codebase (use GitHub export)
-- Access private/authenticated websites
-- Run long-duration processes (>2 min timeout)
+**Security Boundaries (Cannot Change):**
+- Cannot access your local machine
+- Cannot access private/authenticated external websites
+- Worker timeout is ~2 minutes per operation
 
-**What I'm Limited In:**
-- Image generation requires specific tools
-- Some integrations need API keys you provide
-- Complex backend logic may need iteration
+**Flexible Capabilities:**
+- API integrations: Provide your API keys and I'll implement them
+- Database connections: Provide credentials for any database
+- Third-party services: I can integrate any service with proper credentials
+- Complex backends: May need multiple iterations for complex logic
 
-**Workarounds:**
-- Export to GitHub for full control
-- Use integration playbooks for API setup
-- Break complex requests into phases`,
-        relatedTopics: ['Capabilities', 'Workarounds', 'Best practices'],
+**Tips for Best Results:**
+- Provide API keys/credentials when requesting integrations
+- Break very complex requests into phases
+- Use integration playbooks for API setup guidance
+- Export to GitHub for full local control`,
+        relatedTopics: ['Capabilities', 'Best practices'],
     },
 };
 

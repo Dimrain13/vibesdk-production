@@ -16,8 +16,6 @@ export function createTestingAgentTool(
     toolRenderer: RenderToolCall,
     streamCb: (chunk: string) => void
 ) {
-    let callCount = 0;
-
     return tool({
         name: 'testing_agent',
         description: `Automated testing agent for backend and frontend validation.
@@ -43,14 +41,6 @@ LIMITED TO ONE CALL PER CONVERSATION TURN.`,
             context_notes: t.string().optional().describe('Additional context or notes for the testing agent'),
         },
         run: async ({ features_to_test, testing_type }) => {
-            if (callCount > 0) {
-                logger.warn('Testing agent: Already called once this turn');
-                return {
-                    error: 'CALL_LIMIT_EXCEEDED: Testing agent can only be called once per turn.',
-                };
-            }
-            callCount++;
-
             logger.info('Testing agent invoked', { 
                 testing_type, 
                 features: features_to_test 

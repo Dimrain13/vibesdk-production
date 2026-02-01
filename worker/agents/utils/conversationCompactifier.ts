@@ -9,9 +9,9 @@ import type { ChatCompletionMessageFunctionToolCall } from 'openai/resources';
  * Compactification configuration constants
  */
 export const COMPACTIFICATION_CONFIG = {
-    MAX_TURNS: 40,            // Trigger after 40 conversation turns
-    MAX_ESTIMATED_TOKENS: 100000,
-    PRESERVE_RECENT_MESSAGES: 10, // Always keep last 10 messages uncompacted
+    MAX_TURNS: 60,            // Trigger after 60 conversation turns (was 40)
+    MAX_ESTIMATED_TOKENS: 150000, // 150k tokens (was 100k - models handle more now)
+    PRESERVE_RECENT_MESSAGES: 15, // Always keep last 15 messages uncompacted (was 10)
     CHARS_PER_TOKEN: 4,         // Rough estimation: 1 token ≈ 4 characters
 } as const;
 
