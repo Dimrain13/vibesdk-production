@@ -321,6 +321,58 @@ export function useChat({
 					retryTimeouts.current.forEach(clearTimeout);
 					retryTimeouts.current = [];
 
+					// Inactivity timeout configuration (15 minutes of no user activity)
+					const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+					let lastActivityTime = Date.now();
+					let inactivityCheckInterval: ReturnType<typeof setInterval> | null = null;
+
+					// Update activity timestamp on user actions
+					const updateActivity = () => {
+						lastActivityTime = Date.now();
+					};
+
+					// Listen for user activity events
+					const activityEvents = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+					activityEvents.forEach(event => {
+						document.addEventListener(event, updateActivity, { passive: true });
+					});
+
+					// Start ping interval to keep connection alive (every 30 seconds)
+					// But only if there's been recent user activity
+					const pingInterval = setInterval(() => {
+						if (ws.readyState !== WebSocket.OPEN) {
+							clearInterval(pingInterval);
+							return;
+						}
+						
+						const timeSinceActivity = Date.now() - lastActivityTime;
+						
+						// If inactive for too long, close the connection
+						if (timeSinceActivity > INACTIVITY_TIMEOUT_MS) {
+							logger.info('🔌 Closing WebSocket due to inactivity');
+							clearInterval(pingInterval);
+							if (inactivityCheckInterval) clearInterval(inactivityCheckInterval);
+							// Remove activity listeners
+							activityEvents.forEach(event => {
+								document.removeEventListener(event, updateActivity);
+							});
+							ws.close(1000, 'Inactivity timeout');
+							return;
+						}
+						
+						// Send ping to keep connection alive
+						sendWebSocketMessage(ws, 'ping');
+					}, 30000);
+					
+					// Clear ping interval and activity listeners on close
+					ws.addEventListener('close', () => {
+						clearInterval(pingInterval);
+						if (inactivityCheckInterval) clearInterval(inactivityCheckInterval);
+						activityEvents.forEach(event => {
+							document.removeEventListener(event, updateActivity);
+						});
+					}, { once: true });
+
 					// Send success message to user
 					if (isRetry) {
 						// Clear old messages on reconnect to prevent duplicates

@@ -34,7 +34,12 @@ export class RateLimiter {
     private limits: Record<string, RateLimitConfig>;
 
     constructor(customLimits: Partial<Record<string, RateLimitConfig>> = {}) {
-        this.limits = { ...DEFAULT_LIMITS, ...customLimits };
+        this.limits = { ...DEFAULT_LIMITS } as Record<string, RateLimitConfig>;
+        for (const [key, value] of Object.entries(customLimits)) {
+            if (value) {
+                this.limits[key] = value;
+            }
+        }
     }
 
     /**

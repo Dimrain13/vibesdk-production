@@ -18,6 +18,10 @@ export function handleWebSocketMessage(
         const parsedMessage = JSON.parse(message);
 
         switch (parsedMessage.type) {
+            case WebSocketMessageRequests.PING:
+                // Respond to ping with pong to keep connection alive
+                sendToConnection(connection, WebSocketMessageResponses.PONG, { timestamp: Date.now() });
+                return;
             case WebSocketMessageRequests.SESSION_INIT: {
                 const credentials = parsedMessage.credentials as CredentialsPayload | undefined;
                 agent.getBehavior().setRuntimeOverrides(credentialsToRuntimeOverrides(credentials));

@@ -82,6 +82,9 @@ export const WebSocketMessageResponses: Record<string, WebSocketMessageType> = {
 
     // Vault messages
     VAULT_REQUIRED: 'vault_required',
+    
+    // Heartbeat/keep-alive
+    PONG: 'pong',
 } as const satisfies Record<string, WebSocketMessageType>;
 
 // WebSocket message types
@@ -116,6 +119,9 @@ export const WebSocketMessageRequests = {
     // Vault session sync (SK sent to vault WebSocket, only sessionId here)
     VAULT_UNLOCKED: 'vault_unlocked',
     VAULT_LOCKED: 'vault_locked',
+    
+    // Heartbeat/keep-alive
+    PING: 'ping',
 };
 
 export const PREVIEW_EXPIRED_ERROR = 'Preview expired, attempting redeploy. Please try again after a minute or refresh the page';

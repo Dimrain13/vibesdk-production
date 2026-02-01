@@ -66,7 +66,7 @@ export class CacheInterceptor {
     /**
      * Invalidate cache entries matching a pattern
      */
-    invalidate(pattern: string): void {
+    invalidate(_pattern: string): void {
         // Note: This is a simplified implementation
         // A production version would need pattern matching on keys
         this.cache.clear();

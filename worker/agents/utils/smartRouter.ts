@@ -70,7 +70,7 @@ const SIMPLE_INDICATORS = [
 ];
 
 export class SmartRouter {
-    private defaultTier: ModelTier = 'balanced';
+    private _defaultTier: ModelTier = 'balanced';
     private models: Record<string, ModelConfig>;
 
     constructor(customModels?: Record<string, ModelConfig>) {
@@ -187,7 +187,14 @@ export class SmartRouter {
      * Set default tier
      */
     setDefaultTier(tier: ModelTier): void {
-        this.defaultTier = tier;
+        this._defaultTier = tier;
+    }
+
+    /**
+     * Get default tier
+     */
+    getDefaultTier(): ModelTier {
+        return this._defaultTier;
     }
 }
 
