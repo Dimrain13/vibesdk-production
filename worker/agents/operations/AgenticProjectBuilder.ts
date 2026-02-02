@@ -263,9 +263,10 @@ export class AgenticProjectBuilderOperation extends AgentOperationWithTools<
         callbacks: ToolCallbacks
     ): ToolDefinition<unknown, unknown>[] {
         const { logger } = options;
-        const toolRenderer = callbacks.toolRenderer;
         const onToolComplete = callbacks.onToolComplete;
         const streamCb = callbacks.streamCb || (() => {});
+        // Provide a no-op renderer if not provided
+        const toolRenderer: RenderToolCall = callbacks.toolRenderer || (() => {});
 
         let rawTools : ToolDefinition<any, any>[] = [
             // ═══════════════════════════════════════════════════════════════
