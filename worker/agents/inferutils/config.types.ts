@@ -896,6 +896,10 @@ export interface AgentConfig {
     agenticProjectBuilder: ModelConfig;
     /** Specialized agent for API/database integrations - uses more capable model */
     integrationImplementation: ModelConfig;
+    /** Image generation from prompts */
+    imageGeneration: ModelConfig;
+    /** File and document analysis */
+    fileAnalysis: ModelConfig;
 }
 
 // Provider and reasoning effort types for validation

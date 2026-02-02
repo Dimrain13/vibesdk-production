@@ -122,6 +122,22 @@ const PLATFORM_AGENT_CONFIG: AgentConfig = {
         temperature: 0.3,
         fallbackModel: AIModels.GEMINI_2_5_PRO,
     },
+    // Image generation from prompts
+    imageGeneration: {
+        name: AIModels.GPT_4O,
+        reasoning_effort: 'low',
+        max_tokens: 4000,
+        temperature: 0.8,
+        fallbackModel: AIModels.GEMINI_2_5_FLASH,
+    },
+    // File and document analysis  
+    fileAnalysis: {
+        name: AIModels.GPT_4O,
+        reasoning_effort: 'medium',
+        max_tokens: 8000,
+        temperature: 0.3,
+        fallbackModel: AIModels.GEMINI_2_5_PRO,
+    },
 };
 
 //======================================================================================
@@ -192,6 +208,22 @@ const DEFAULT_AGENT_CONFIG: AgentConfig = {
         name: AIModels.GEMINI_2_5_PRO,
         reasoning_effort: 'high',
         max_tokens: 32000,
+        temperature: 0.3,
+        fallbackModel: AIModels.GEMINI_2_5_FLASH,
+    },
+    // Image generation from prompts
+    imageGeneration: {
+        name: AIModels.GEMINI_2_5_FLASH,
+        reasoning_effort: 'low',
+        max_tokens: 4000,
+        temperature: 0.8,
+        fallbackModel: AIModels.GEMINI_2_5_FLASH_LITE,
+    },
+    // File and document analysis
+    fileAnalysis: {
+        name: AIModels.GEMINI_2_5_PRO,
+        reasoning_effort: 'medium',
+        max_tokens: 8000,
         temperature: 0.3,
         fallbackModel: AIModels.GEMINI_2_5_FLASH,
     },

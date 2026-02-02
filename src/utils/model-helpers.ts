@@ -65,8 +65,10 @@ export function categorizeAgent(agentKey: string): string {
                 'codeReview': 'debugging',
                 'deepDebugger': 'debugging',
 
-                // Advanced
+                // Advanced - Media and specialized tools
                 'screenshotAnalysis': 'advanced',
+                'imageGeneration': 'advanced',
+                'fileAnalysis': 'advanced',
         };
 
         // Check specific mappings first

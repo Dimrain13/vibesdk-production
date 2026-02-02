@@ -181,6 +181,10 @@ export default function SettingsPage() {
 					'UI/design analysis - Analyzes visual designs and screenshots to understand UI requirements. Requires visual understanding and design interpretation skills.',
 				integrationImplementation:
 					'API/Database integrations - Specialized for implementing third-party API integrations, database connections, OAuth flows, and payment processors. Uses high-capability models for complex integration logic.',
+				imageGeneration:
+					'Image Generation - Creates images from text prompts using AI models like DALL-E or Stable Diffusion. Higher temperature for creative outputs.',
+				fileAnalysis:
+					'File Analysis - AI-powered analysis of documents, images, and files. Extracts insights, summaries, and structured data from uploaded content.',
 			};
 			return (
 				descriptions[key] ||

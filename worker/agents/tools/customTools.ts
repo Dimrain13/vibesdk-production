@@ -29,6 +29,12 @@ import { createCrawlTool } from './toolkit/crawl-tool';
 import { createAskHumanTool } from './toolkit/ask-human';
 import { createFinishTool } from './toolkit/finish-tool';
 import { createIntegrationAgentTool } from './toolkit/integration-agent';
+// Media & File tools
+import { createScreenshotTool } from './toolkit/screenshot-tool';
+import { createImageGenerationTool } from './toolkit/image-generation-tool';
+import { createImageSelectorTool } from './toolkit/image-selector-tool';
+import { createFileAnalysisTool } from './toolkit/file-analysis-tool';
+import { createFileExtractionTool } from './toolkit/file-extraction-tool';
 import { ICodingAgent } from '../services/interfaces/ICodingAgent';
 import { Message } from '../inferutils/common';
 import { ChatCompletionMessageFunctionToolCall } from 'openai/resources';
@@ -80,6 +86,12 @@ export function buildTools(
         createFinishTool(logger, toolRenderer, streamCb),
         // Specialized integration agent (uses more capable model)
         createIntegrationAgentTool(agent, logger, toolRenderer, streamCb),
+        // Media & File tools
+        createScreenshotTool(logger, toolRenderer, streamCb),
+        createImageGenerationTool(logger, toolRenderer, streamCb),
+        createImageSelectorTool(logger, toolRenderer, streamCb),
+        createFileAnalysisTool(logger, toolRenderer, streamCb),
+        createFileExtractionTool(logger, toolRenderer, streamCb),
     ];
 }
 
