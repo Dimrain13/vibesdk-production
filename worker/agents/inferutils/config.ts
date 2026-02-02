@@ -1,10 +1,12 @@
 import { 
     AgentActionKey, 
     AgentConfig, 
-    AgentConstraintConfig,
+    AgentConstraintConfig, 
     AIModels,
     AllModels,
-} from './config.types';
+    LiteModels,
+    RegularModels,
+} from "./config.types";
 import { env } from 'cloudflare:workers';
 
 // Common configs - these are good defaults
@@ -112,6 +114,14 @@ const PLATFORM_AGENT_CONFIG: AgentConfig = {
         temperature: 1,
         fallbackModel: AIModels.GEMINI_2_5_PRO,
     },
+    // Specialized agent for API/database integrations - uses more capable model
+    integrationImplementation: {
+        name: AIModels.CLAUDE_3_5_SONNET,
+        reasoning_effort: 'high',
+        max_tokens: 32000,
+        temperature: 0.3,
+        fallbackModel: AIModels.GEMINI_2_5_PRO,
+    },
 };
 
 //======================================================================================
@@ -177,6 +187,14 @@ const DEFAULT_AGENT_CONFIG: AgentConfig = {
         temperature: 1,
         fallbackModel: AIModels.GEMINI_2_5_FLASH,
     },
+    // Specialized agent for API/database integrations
+    integrationImplementation: {
+        name: AIModels.GEMINI_2_5_PRO,
+        reasoning_effort: 'high',
+        max_tokens: 32000,
+        temperature: 0.3,
+        fallbackModel: AIModels.GEMINI_2_5_FLASH,
+    },
 };
 
 export const AGENT_CONFIG: AgentConfig = env.PLATFORM_MODEL_PROVIDERS 
@@ -186,11 +204,11 @@ export const AGENT_CONFIG: AgentConfig = env.PLATFORM_MODEL_PROVIDERS
 
 export const AGENT_CONSTRAINTS: Map<AgentActionKey, AgentConstraintConfig> = new Map([
 	['fastCodeFixer', {
-		allowedModels: new Set(AllModels),
+		allowedModels: new Set([AIModels.DISABLED]),
 		enabled: true,
 	}],
 	['realtimeCodeFixer', {
-		allowedModels: new Set(AllModels),
+		allowedModels: new Set([AIModels.DISABLED]),
 		enabled: true,
 	}],
 	['fileRegeneration', {
@@ -202,15 +220,15 @@ export const AGENT_CONSTRAINTS: Map<AgentActionKey, AgentConstraintConfig> = new
 		enabled: true,
 	}],
 	['projectSetup', {
-		allowedModels: new Set(AllModels),
+		allowedModels: new Set([...RegularModels, AIModels.GEMINI_2_5_PRO]),
 		enabled: true,
 	}],
 	['conversationalResponse', {
-		allowedModels: new Set(AllModels),
+		allowedModels: new Set(RegularModels),
 		enabled: true,
 	}],
 	['templateSelection', {
-		allowedModels: new Set(AllModels),
+		allowedModels: new Set(LiteModels),
 		enabled: true,
 	}],
 ]);

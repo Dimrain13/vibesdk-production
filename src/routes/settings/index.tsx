@@ -179,6 +179,8 @@ export default function SettingsPage() {
 					'File recreation - Focused on pure coding ability to regenerate or rewrite files. No context window or deep thinking required, just excellent code generation.',
 				screenshotAnalysis:
 					'UI/design analysis - Analyzes visual designs and screenshots to understand UI requirements. Requires visual understanding and design interpretation skills.',
+				integrationImplementation:
+					'API/Database integrations - Specialized for implementing third-party API integrations, database connections, OAuth flows, and payment processors. Uses high-capability models for complex integration logic.',
 			};
 			return (
 				descriptions[key] ||

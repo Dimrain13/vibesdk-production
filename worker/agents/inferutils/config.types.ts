@@ -894,6 +894,8 @@ export interface AgentConfig {
     conversationalResponse: ModelConfig;
     deepDebugger: ModelConfig;
     agenticProjectBuilder: ModelConfig;
+    /** Specialized agent for API/database integrations - uses more capable model */
+    integrationImplementation: ModelConfig;
 }
 
 // Provider and reasoning effort types for validation

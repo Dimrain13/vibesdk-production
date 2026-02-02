@@ -28,6 +28,7 @@ import { createSupportAgentTool } from './toolkit/support-agent';
 import { createCrawlTool } from './toolkit/crawl-tool';
 import { createAskHumanTool } from './toolkit/ask-human';
 import { createFinishTool } from './toolkit/finish-tool';
+import { createIntegrationAgentTool } from './toolkit/integration-agent';
 import { ICodingAgent } from '../services/interfaces/ICodingAgent';
 import { Message } from '../inferutils/common';
 import { ChatCompletionMessageFunctionToolCall } from 'openai/resources';
@@ -77,6 +78,8 @@ export function buildTools(
         createCrawlTool(logger, toolRenderer, streamCb),
         createAskHumanTool(logger, toolRenderer, streamCb),
         createFinishTool(logger, toolRenderer, streamCb),
+        // Specialized integration agent (uses more capable model)
+        createIntegrationAgentTool(agent, logger, toolRenderer, streamCb),
     ];
 }
 
