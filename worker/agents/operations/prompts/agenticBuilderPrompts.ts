@@ -49,21 +49,23 @@ Why: Verbose explanations waste tokens and degrade user experience. Think deeply
 **Adhere strictly to template constraints. Reference usage.md for template-specific details.**
 </critical_rules>`
         : `<critical_rules>
-1. **🔴 CLARIFY BEFORE BUILDING**: For NEW projects, use ask_human tool FIRST to gather requirements. Ask about features, design, tech stack, integrations. Only proceed to blueprinting AFTER user confirms understanding. Skip only for trivial requests or explicit "just build it" instructions.
+1. **🔴 CLARIFY BEFORE BUILDING**: For NEW projects, use ask_human tool FIRST to gather requirements. Ask about features, design, tech stack, integrations. Only proceed to blueprinting AFTER user confirms. Skip only for trivial requests or explicit "just build it" instructions.
 
-2. **Two-Filesystem Architecture**: You work with Virtual Filesystem (persistent Durable Object storage with git) and Sandbox Filesystem (ephemeral container where code executes). Files must sync from virtual → sandbox via deploy_preview.
+2. **🛑 STOP AFTER ask_human**: When you call ask_human, you MUST STOP immediately. Do NOT call generate_blueprint, generate_files, or any other tool in the same turn. Wait for the user's response in their next message.
 
-3. **Template-First Approach**: For interactive projects, always call init_suitable_template() first. AI selects best-matching template from library, providing working foundation. Skip only for static documentation.
+3. **Two-Filesystem Architecture**: You work with Virtual Filesystem (persistent Durable Object storage with git) and Sandbox Filesystem (ephemeral container where code executes). Files must sync from virtual → sandbox via deploy_preview.
 
-4. **Deploy to Test**: Files in virtual filesystem don't execute until you call deploy_preview to sync them to sandbox. Always deploy after generating files before testing.
+4. **Template-First Approach**: For interactive projects, always call init_suitable_template() first. AI selects best-matching template from library, providing working foundation. Skip only for static documentation.
 
-5. **Blueprint Before Building**: Generate structured plan via generate_blueprint before implementation. Defines what to build and guides development phases.
+5. **Deploy to Test**: Files in virtual filesystem don't execute until you call deploy_preview to sync them to sandbox. Always deploy after generating files before testing.
 
-6. **Log Recency Matters**: Logs and errors are cumulative. Check timestamps before fixing - old errors may already be resolved.
+6. **Blueprint Before Building**: Generate structured plan via generate_blueprint before implementation. Defines what to build and guides development phases.
 
-7. **Cloudflare Workers Runtime**: No Node.js APIs (fs, path, process). Use Web APIs (fetch, Request/Response, Web Streams).
+7. **Log Recency Matters**: Logs and errors are cumulative. Check timestamps before fixing - old errors may already be resolved.
 
-8. **Commit Frequently**: Use git commit after meaningful changes to preserve history in virtual filesystem.
+8. **Cloudflare Workers Runtime**: No Node.js APIs (fs, path, process). Use Web APIs (fetch, Request/Response, Web Streams).
+
+9. **Commit Frequently**: Use git commit after meaningful changes to preserve history in virtual filesystem.
 </critical_rules>`;
 
     const architecture = isPresentationProject
@@ -179,11 +181,12 @@ Static content (docs, markdown): Skip template selection and sandbox deployment.
 
 ## 🔴 PRIORITY: User Interaction (Use First!)
 
-**ask_human** - Ask user for clarification or input
+**ask_human** - Ask user for clarification or input (HALTS EXECUTION)
 - What: Pauses to gather user requirements, preferences, or decisions
 - When: FIRST tool to use for new projects or unclear requirements
 - How: Keep questions concise (max 5), provide bullet point options
-- After: Wait for user response before proceeding to blueprint/implementation
+- **CRITICAL**: After calling ask_human, STOP IMMEDIATELY. Do NOT call any other tools.
+- The user will respond in their next message - wait for it before continuing.
 - Skip only if: User explicitly says "just build it" or request is trivially simple
 
 ${isPresentationProject ? `**Presentation-Specific Parallel Patterns**:
