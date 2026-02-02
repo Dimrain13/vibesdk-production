@@ -272,7 +272,7 @@ export class AgenticProjectBuilderOperation extends AgentOperationWithTools<
             // ═══════════════════════════════════════════════════════════════
             // 🔴 E1 PRIORITY TOOLS - Use these FIRST (Interactive Workflow)
             // ═══════════════════════════════════════════════════════════════
-            createAskHumanTool(logger, toolRenderer, streamCb),  // ALWAYS clarify first for new projects
+            createAskHumanTool(session.agent, logger, toolRenderer, streamCb),  // ALWAYS clarify first for new projects
             createFinishTool(logger, toolRenderer, streamCb),     // Summarize work, update PRD
             
             // ═══════════════════════════════════════════════════════════════
@@ -346,7 +346,9 @@ export class AgenticProjectBuilderOperation extends AgentOperationWithTools<
 
         return {
             agentActionName: 'agenticProjectBuilder' as AgentActionKey,
-            completionSignalName: 'mark_generation_complete',
+            // Both mark_generation_complete AND ask_human halt execution
+            // ask_human halts to wait for user response before continuing
+            completionSignalName: ['mark_generation_complete', 'ask_human'],
             operationalMode: inputs.operationalMode,
             allowWarningInjection: inputs.operationalMode === 'initial',
         };

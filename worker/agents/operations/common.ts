@@ -134,13 +134,18 @@ export abstract class AgentOperationWithTools<
     ): TOutput;
 
     protected createCompletionConfig(
-        completionSignalName: string,
+        completionSignalName: string | string[],
         operationalMode: "initial" | "followup",
         allowWarningInjection: boolean,
     ): CompletionConfig {
+        // Support both single string and array of completion tool names
+        const completionToolNames = Array.isArray(completionSignalName) 
+            ? completionSignalName 
+            : [completionSignalName];
+        
         return {
-            detector: completionSignalName
-                ? new CompletionDetector([completionSignalName])
+            detector: completionToolNames.length > 0
+                ? new CompletionDetector(completionToolNames)
                 : undefined,
             operationalMode,
             allowWarningInjection,

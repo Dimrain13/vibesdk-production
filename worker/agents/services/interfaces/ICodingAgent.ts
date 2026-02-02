@@ -16,6 +16,10 @@ export interface ICodingAgent {
     
     setMVPGenerated(): boolean;
     
+    // For ask_human - halt execution and wait for user response
+    setWaitingForUserInput(waiting: boolean): void;
+    isWaitingForUserInput(): boolean;
+    
     getLogs(reset?: boolean, durationSeconds?: number): Promise<string>;
     
     fetchRuntimeErrors(clear?: boolean): Promise<RuntimeError[]>;

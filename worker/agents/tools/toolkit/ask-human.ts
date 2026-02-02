@@ -1,6 +1,7 @@
 import { tool, t } from '../types';
 import { StructuredLogger } from '../../../logger';
 import { RenderToolCall } from '../../operations/UserConversationProcessor';
+import { ICodingAgent } from '../../services/interfaces/ICodingAgent';
 
 /**
  * Ask Human Tool
@@ -13,6 +14,7 @@ import { RenderToolCall } from '../../operations/UserConversationProcessor';
  */
 
 export function createAskHumanTool(
+    agent: ICodingAgent,
     logger: StructuredLogger,
     toolRenderer: RenderToolCall,
     streamCb: (chunk: string) => void
@@ -47,6 +49,9 @@ Limit to 5 questions max with bullet point choices.`,
             streamCb(question);
             streamCb('\n\n');
 
+            // Set the flag to halt the build loop
+            agent.setWaitingForUserInput(true);
+
             toolRenderer({ 
                 name: 'ask_human', 
                 status: 'success', 
@@ -57,7 +62,7 @@ Limit to 5 questions max with bullet point choices.`,
             return {
                 success: true,
                 status: 'WAITING_FOR_USER',
-                message: 'Question presented to user. STOP here and wait for their response.',
+                message: 'Question presented to user. Execution halted until user responds.',
                 instruction: 'Do NOT proceed with any other tools until user responds.',
                 question_sent: question,
             };
