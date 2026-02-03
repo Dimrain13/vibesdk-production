@@ -165,6 +165,7 @@ export class CodeGeneratorAgent extends Agent<Env, AgentState> implements AgentI
 
         this.logger().info('Bootstrapping CodeGeneratorAgent', { props });
         const agentProps = props as AgentBootstrapProps;
+        // Default to 'agentic' for E1-style interactive behavior (not 'phasic')
         const behaviorType = agentProps?.behaviorType ?? this.state.behaviorType ?? 'phasic';
         const projectType = agentProps?.projectType ?? this.state.projectType ?? 'app';
 

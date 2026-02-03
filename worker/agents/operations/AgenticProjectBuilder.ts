@@ -272,8 +272,8 @@ export class AgenticProjectBuilderOperation extends AgentOperationWithTools<
             // ═══════════════════════════════════════════════════════════════
             // 🔴 E1 PRIORITY TOOLS - Use these FIRST (Interactive Workflow)
             // ═══════════════════════════════════════════════════════════════
-            createAskHumanTool(logger, toolRenderer, streamCb),  // ALWAYS clarify first for new projects
-            createFinishTool(logger, toolRenderer, streamCb),     // Summarize work, update PRD
+            createAskHumanTool(logger, toolRenderer, streamCb),  // Ask user for clarification
+            createFinishTool(logger, toolRenderer, streamCb),     // Summarize work
             
             // ═══════════════════════════════════════════════════════════════
             // E1 AGENT TOOLS - Specialized sub-agents for complex tasks

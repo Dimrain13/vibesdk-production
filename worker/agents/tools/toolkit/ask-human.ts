@@ -6,7 +6,7 @@ import { RenderToolCall } from '../../operations/UserConversationProcessor';
  * Ask Human Tool
  * 
  * Pauses execution to ask the user for clarification or input.
- * Use when you need user decisions or information to proceed.
+ * Streams the question to chat and returns a signal to stop.
  */
 
 export function createAskHumanTool(
@@ -18,25 +18,24 @@ export function createAskHumanTool(
         name: 'ask_human',
         description: `Ask the user for clarification or input.
 
-Use this tool for:
-- Clarification on ambiguous instructions
-- Getting confirmation before critical actions
-- Requesting human feedback on proposed solutions
-- Asking for credentials or API keys
-- Getting user preferences or choices
+Use this tool when:
+- The request is unclear or ambiguous
+- You need user preferences or choices
+- You need confirmation before a major action
 
-Keep questions concise and provide clear options when possible.
-Limit to 5 questions max with bullet point choices.`,
+Keep questions concise. Provide clear options when possible.`,
         args: {
             question: t.string().describe('The question to ask the user'),
         },
         run: async ({ question }) => {
-            logger.info('Ask human tool invoked', { question: question.slice(0, 100) });
+            logger.info('Ask human tool invoked', { 
+                question: question.slice(0, 100) 
+            });
 
-            streamCb('\n\n❓ **Question for You**\n\n');
+            // Stream the question directly to chat
+            streamCb('\n\n');
             streamCb(question);
             streamCb('\n\n');
-            streamCb('*Please respond with your answer or preference.*\n');
 
             toolRenderer({ 
                 name: 'ask_human', 
@@ -46,9 +45,8 @@ Limit to 5 questions max with bullet point choices.`,
 
             return {
                 success: true,
-                question_sent: true,
-                message: 'Question has been presented to the user. Waiting for their response.',
-                note: 'The user will respond in their next message.',
+                message: 'Question sent. Waiting for user response.',
+                question_sent: question,
             };
         },
     });

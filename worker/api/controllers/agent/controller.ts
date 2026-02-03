@@ -33,11 +33,9 @@ const defaultCodeGenArgs: Partial<CodeGenArgs> = {
 const resolveBehaviorType = (body: CodeGenArgs): BehaviorType => {
     if (body.behaviorType) return body.behaviorType;
     const pt = body.projectType;
-    // Presentations, workflows, and general projects use agentic
     if (pt === 'presentation' || pt === 'workflow' || pt === 'general') return 'agentic';
-    // DEFAULT TO AGENTIC for E1-style interactive behavior
-    // Agentic mode uses ask_human for clarification before blueprinting
-    return 'agentic';
+    // default (including 'app' and when projectType omitted)
+    return 'phasic';
 };
 
 const resolveProjectType = (body: CodeGenArgs): ProjectType | 'auto' => {

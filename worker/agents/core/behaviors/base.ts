@@ -427,6 +427,18 @@ export abstract class BaseCodingBehavior<TState extends BaseProjectState>
     isMVPGenerated(): boolean {
         return this.state.mvpGenerated;
     }
+    
+    // For ask_human - track if we're waiting for user response
+    protected _waitingForUserInput: boolean = false;
+    
+    setWaitingForUserInput(waiting: boolean): void {
+        this._waitingForUserInput = waiting;
+        this.logger.info('Set waitingForUserInput', { waiting });
+    }
+    
+    isWaitingForUserInput(): boolean {
+        return this._waitingForUserInput;
+    }
 
     private async buildWrapper() {
         this.broadcast(WebSocketMessageResponses.GENERATION_STARTED, {
