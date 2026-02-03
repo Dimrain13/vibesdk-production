@@ -16,7 +16,7 @@ import { FileRegenerationOperation } from '../../operations/FileRegeneration';
 import { PhaseGenerationOperation } from '../../operations/PhaseGeneration';
 import { FastCodeFixerOperation } from '../../operations/PostPhaseCodeFixer';
 import { customizePackageJson, customizeTemplateFiles, generateProjectName } from '../../utils/templateCustomizer';
-import { generateBlueprint } from '../../planning/blueprint';
+// generateBlueprint removed - no longer auto-generating blueprints
 import { RateLimitExceededError } from 'shared/types/errors';
 import {  ImageAttachment, type ProcessedImageAttachment } from '../../../types/image-attachment';
 import { OperationOptions } from '../../operations/common';
@@ -67,7 +67,7 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
         if (!templateInfo || !templateInfo.templateDetails) {
             throw new Error('Phasic initialization requires templateInfo.templateDetails');
         }
-        const { query, language, frameworks, hostname, inferenceContext, sandboxSessionId } = initArgs;
+        const { query, hostname, inferenceContext, sandboxSessionId } = initArgs;
         
         // DON'T automatically generate blueprint - let the conversation processor handle it
         // The agent will decide what to do based on the user's actual request
@@ -94,7 +94,6 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
                 title: '',
                 projectName: projectName,
                 description: query,
-                features: [],
                 plan: [],
             },
             templateName: templateInfo.templateDetails.name,
