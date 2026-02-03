@@ -540,7 +540,7 @@ export function useChat({
 					} = {
 						websocketUrl: '',
 						agentId: '',
-						behaviorType: 'phasic', for E1-style behavior
+						behaviorType: 'phasic',
 						projectType: 'app',
 						template: {
 							files: [],
@@ -548,20 +548,14 @@ export function useChat({
 					};
 
 					let startedBlueprintStream = false;
-					const initialBehaviorType = getBehaviorTypeForProject(projectType);
-					// Agentic mode doesn't show bootstrap message - it asks questions first
-					if (initialBehaviorType === 'phasic') {
-						sendMessage(
-							createAIMessage('main', "Sure, let's get started. Bootstrapping the project first...", true),
-						);
-					}
+					// No automatic messages - the agent will respond based on what the user asked
 
 					for await (const obj of ndjsonStream(response.stream)) {
                         logger.debug('Received chunk from server:', obj);
 						if (obj.chunk) {
 							if (!startedBlueprintStream) {
-								sendMessage(createAIMessage('main', 'Blueprint is being generated...', true));
-								logger.info('Blueprint stream has started');
+								// Silent initialization - no "Blueprint is being generated" message
+								logger.info('Bootstrap stream started');
 								setIsBootstrapping(false);
 								setIsGeneratingBlueprint(true);
 								startedBlueprintStream = true;
@@ -601,14 +595,10 @@ export function useChat({
 						}
 					}
 
+					// Don't show "Blueprint generation complete" message
+					// The agent now reacts to what the user asks instead of auto-generating blueprints
 					updateStage('blueprint', { status: 'completed' });
 					setIsGeneratingBlueprint(false);
-					const finalBehaviorType = getBehaviorTypeForProject(projectType);
-					if (finalBehaviorType === 'phasic') {
-						sendMessage(
-							createAIMessage('main', 'Blueprint generation complete. Now starting the code generation...', true),
-						);
-					}
 
 					if (!result.websocketUrl || !result.agentId) {
 						throw new Error('Failed to initialize agent session');
