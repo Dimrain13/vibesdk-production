@@ -540,7 +540,7 @@ export function useChat({
 					} = {
 						websocketUrl: '',
 						agentId: '',
-						behaviorType: 'phasic',
+						behaviorType: 'phasic', for E1-style behavior
 						projectType: 'app',
 						template: {
 							files: [],
@@ -549,6 +549,7 @@ export function useChat({
 
 					let startedBlueprintStream = false;
 					const initialBehaviorType = getBehaviorTypeForProject(projectType);
+					// Agentic mode doesn't show bootstrap message - it asks questions first
 					if (initialBehaviorType === 'phasic') {
 						sendMessage(
 							createAIMessage('main', "Sure, let's get started. Bootstrapping the project first...", true),
