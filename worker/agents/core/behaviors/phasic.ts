@@ -109,6 +109,7 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
                 name: '',
                 description: '',
                 files: [],
+                lastPhase: true,
             },
         };
         
