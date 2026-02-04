@@ -5,7 +5,7 @@ import {
     PhaseImplementationSchemaType,
 } from '../../schemas';
 import { StaticAnalysisResponse } from '../../../services/sandbox/sandboxTypes';
-import { CurrentDevState, MAX_PHASES, PhasicState } from '../state';
+import { CurrentDevState, MAX_PHASES, PhasicState, FileState } from '../state';
 import { AllIssues, AgentInitArgs, PhaseExecutionResult, UserContext } from '../types';
 import { WebSocketMessageResponses } from '../../constants';
 import { UserConversationProcessor } from '../../operations/UserConversationProcessor';
@@ -77,7 +77,7 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
         if (!templateInfo || !templateInfo.templateDetails) {
             throw new Error('Phasic initialization requires templateInfo.templateDetails');
         }
-        let { query, language, frameworks, hostname, inferenceContext, sandboxSessionId } = initArgs;
+        let { query, language: _language, frameworks, hostname, inferenceContext, sandboxSessionId } = initArgs;
         
         // ============================================
         // STEP 1: Run Conversational Gateway
@@ -203,7 +203,7 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
         
         this.logger.info('Generated project name', { projectName });
         
-        // Initialize state without blueprint
+        // Initialize state FIRST (needed for getOperationOptions to work)
         const nextState: PhasicState = {
             ...this.state,
             projectName,
@@ -237,15 +237,16 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
         
         this.setState(nextState);
         
-        // Broadcast that we're starting generation
+        // Broadcast that we're starting generation (no real blueprint, but satisfy interface)
         this.broadcast(WebSocketMessageResponses.BLUEPRINT_GENERATED, {
             blueprint: nextState.blueprint,
         });
         
-        // Generate files directly using SimpleCodeGeneration
+        // NOW we can call getOperationOptions() since state is set up
         this.logger.info('Starting direct file generation');
+        const operationOptions = this.getOperationOptions();
         
-        // Call SimpleCodeGeneration to build everything at once
+        // Generate files directly using SimpleCodeGeneration
         const generationResult = await this.operations.simpleGenerateFiles.execute({
             phaseName: 'Complete Application',
             phaseDescription: query,
@@ -270,32 +271,20 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
                     message: message,
                 });
             },
-        }, {
-            env: this.env,
-            context: new GenerationContext({
-                query: query,
-                projectType: this.projectType,
-                templateDetails: templateInfo.templateDetails,
-                existingFiles: {},
-                language: language!,
-                frameworks: frameworks!,
-                images: initArgs.images,
-            }),
-            logger: this.logger,
-        });
+        }, operationOptions);
         
-        // Store generated files in state
+        // Store generated files in state (using generatedFilesMap)
         const fileStateMap: Record<string, FileState> = {};
         for (const file of generationResult.files) {
             fileStateMap[file.filePath] = {
-                fileContent: file.fileContent,
-                currentPhase: 'Complete Application',
+                ...file, // filePath, fileContents, filePurpose
+                lastDiff: '', // Initialize lastDiff for FileState
             };
         }
         
         this.setState({
             ...this.state,
-            existingFiles: fileStateMap,
+            generatedFilesMap: fileStateMap,
         });
         
         this.logger.info('Direct generation complete', { 
@@ -330,8 +319,8 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
         
         this.logger.info('Committed customized template files to git');
         
-        // Deploy the generated files
-        await this.deployFiles();
+        // Deploy the generated files to sandbox
+        await this.deployToSandbox(generationResult.files, true, 'Initial application generation');
         
         // SIMPLE MODE: No phases, no state machine - files are already generated and deployed!
         // In the old phasic flow, we would call initializeAsync() here to start phase generation
