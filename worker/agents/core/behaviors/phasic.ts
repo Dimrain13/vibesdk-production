@@ -97,6 +97,44 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
             this.logger
         );
         
+        if (gatewayResult.status === 'conversational_answer') {
+            // Just answer the question - no building needed
+            this.logger.info('Gateway decided to answer conversationally, not building');
+            
+            // Stream the answer to the user
+            initArgs.onBlueprintChunk('\n\n' + gatewayResult.conversationalAnswer + '\n\n');
+            
+            // Set up minimal state without building
+            const packageJson = templateInfo.templateDetails.allFiles['package.json'];
+            const projectName = generateProjectName(
+                'answered-question',
+                generateNanoId(),
+                PhasicCodingBehavior.PROJECT_NAME_PREFIX_MAX_LENGTH
+            );
+            
+            const answeredState: PhasicState = {
+                ...this.state,
+                projectName,
+                query,
+                blueprint: {} as any, // Empty - no building needed
+                templateName: templateInfo.templateDetails.name,
+                sandboxInstanceId: undefined,
+                generatedPhases: [],
+                commandsHistory: [],
+                lastPackageJson: packageJson,
+                sessionId: sandboxSessionId!,
+                hostname,
+                metadata: inferenceContext.metadata,
+                projectType: this.projectType,
+                behaviorType: 'phasic',
+                awaitingClarification: false,
+            };
+            this.setState(answeredState);
+            
+            this.logger.info('Agent answered question conversationally, no build triggered');
+            return this.state;
+        }
+        
         if (gatewayResult.status === 'needs_clarification') {
             // Stream the clarification question to the user
             this.logger.info('Gateway requires clarification, streaming question');
