@@ -32,10 +32,9 @@ const defaultCodeGenArgs: Partial<CodeGenArgs> = {
 
 const resolveBehaviorType = (body: CodeGenArgs): BehaviorType => {
     if (body.behaviorType) return body.behaviorType;
-    const pt = body.projectType;
-    if (pt === 'presentation' || pt === 'workflow' || pt === 'general') return 'agentic';
-    // default (including 'app' and when projectType omitted)
-    return 'phasic';
+    // Default to agentic for interactive behavior
+    // Use phasic only when explicitly requested
+    return 'agentic';
 };
 
 const resolveProjectType = (body: CodeGenArgs): ProjectType | 'auto' => {
@@ -185,28 +184,6 @@ export class CodingAgentController extends BaseController {
                 writer.write("terminate");
                 writer.close();
                 this.logger.info(`Agent ${agentId} terminated successfully`);
-            }).catch(async (error: Error) => {
-                // Handle CONVERSATION_MODE - user didn't make a build request
-                if (error.message && error.message.startsWith('CONVERSATION_MODE:')) {
-                    this.logger.info(`Agent ${agentId} entered conversation mode - not a build request`);
-                    writer.write({
-                        type: 'conversation',
-                        message: "I'd be happy to help! It looks like you might want to have a conversation rather than build an app right now. Could you clarify what you'd like me to do? If you want me to build something, try saying something like 'Build me a [type of app]' or 'Create a [description]'.",
-                        query: query,
-                        agentId: agentId,
-                    });
-                    writer.write("terminate");
-                    writer.close();
-                } else {
-                    // Other errors - propagate normally
-                    this.logger.error(`Agent ${agentId} initialization failed:`, error);
-                    writer.write({
-                        type: 'error',
-                        message: error.message || 'Initialization failed',
-                    });
-                    writer.write("terminate");
-                    writer.close();
-                }
             });
 
             this.logger.info(`Agent ${agentId} init launched successfully`);

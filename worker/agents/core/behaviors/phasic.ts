@@ -28,6 +28,7 @@ import { ICodingAgent } from '../../services/interfaces/ICodingAgent';
 import { SimpleCodeGenerationOperation } from '../../operations/SimpleCodeGeneration';
 import { StateMigration } from '../stateMigration';
 import { runPreDeploySafetyGate } from '../../utils/preDeploySafetyGate';
+import { runConversationalGateway } from '../../operations/ConversationalGateway';
 
 interface PhasicOperations extends BaseCodingOperations {
     generateNextPhase: PhaseGenerationOperation;
@@ -46,6 +47,9 @@ interface PhasicOperations extends BaseCodingOperations {
 export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implements ICodingAgent {
     protected static readonly PROJECT_NAME_PREFIX_MAX_LENGTH = 20;
     
+    // Store pending init args when awaiting user clarification
+    protected pendingInitArgs: AgentInitArgs<PhasicState> | null = null;
+    
     protected operations: PhasicOperations = {
         regenerateFile: new FileRegenerationOperation(),
         fastCodeFixer: new FastCodeFixerOperation(),
@@ -58,6 +62,11 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
     /**
      * Initialize the code generator with project blueprint and template
      * Sets up services and begins deployment process
+     * 
+     * Flow:
+     * 1. Run conversational gateway to check if clarification needed
+     * 2. If clarification needed → stream question, set awaitingClarification flag, return early
+     * 3. If ready to build → proceed with blueprint generation
      */
     async initialize(
         initArgs: AgentInitArgs<PhasicState>,
@@ -68,21 +77,76 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
         if (!templateInfo || !templateInfo.templateDetails) {
             throw new Error('Phasic initialization requires templateInfo.templateDetails');
         }
-        const { query, language, frameworks, hostname, inferenceContext, sandboxSessionId } = initArgs;
+        let { query, language, frameworks, hostname, inferenceContext, sandboxSessionId } = initArgs;
         
-        // ============================================================================
-        // CONVERSATION-FIRST: Intent Detection
-        // Check if user actually wants to BUILD something before generating a blueprint
-        // ============================================================================
-        const isBuildRequest = this.detectBuildIntent(query);
+        // ============================================
+        // STEP 1: Run Conversational Gateway
+        // ============================================
+        this.logger.info('Running conversational gateway', { query: query.slice(0, 100) });
         
-        if (!isBuildRequest) {
-            this.logger.info('Query does not appear to be a build request, skipping blueprint generation', { query });
-            // Throw an error that the controller can catch and handle conversationally
-            throw new Error(`CONVERSATION_MODE: This doesn't appear to be a build request. Query: "${query}"`);
+        const gatewayResult = await runConversationalGateway(
+            {
+                query,
+                projectType: this.projectType,
+                onStreamChunk: (chunk: string) => {
+                    initArgs.onBlueprintChunk(chunk);
+                },
+            },
+            this.env,
+            inferenceContext,
+            this.logger
+        );
+        
+        if (gatewayResult.status === 'needs_clarification') {
+            // Stream the clarification question to the user
+            this.logger.info('Gateway requires clarification, streaming question');
+            
+            // Stream the question
+            initArgs.onBlueprintChunk('\n\n' + gatewayResult.clarificationQuestion + '\n\n');
+            
+            // Set up minimal state - user will respond via WebSocket
+            const packageJson = templateInfo.templateDetails.allFiles['package.json'];
+            const projectName = generateProjectName(
+                'project',
+                generateNanoId(),
+                PhasicCodingBehavior.PROJECT_NAME_PREFIX_MAX_LENGTH
+            );
+            
+            const awaitingState: PhasicState = {
+                ...this.state,
+                projectName,
+                query,
+                blueprint: {} as any, // Empty - will be generated after user responds
+                templateName: templateInfo.templateDetails.name,
+                sandboxInstanceId: undefined,
+                generatedPhases: [],
+                commandsHistory: [],
+                lastPackageJson: packageJson,
+                sessionId: sandboxSessionId!,
+                hostname,
+                metadata: inferenceContext.metadata,
+                projectType: this.projectType,
+                behaviorType: 'phasic',
+                awaitingClarification: true, // Flag to indicate we're waiting for user response
+            };
+            this.setState(awaitingState);
+            
+            // Store the init args for later use when user responds
+            this.pendingInitArgs = initArgs;
+            
+            this.logger.info('Agent awaiting user clarification');
+            return this.state;
         }
         
-        // Generate a blueprint
+        // Gateway approved - use enhanced query if provided
+        if (gatewayResult.enhancedQuery) {
+            query = gatewayResult.enhancedQuery;
+            this.logger.info('Using enhanced query from gateway', { enhancedQuery: query.slice(0, 100) });
+        }
+        
+        // ============================================
+        // STEP 2: Generate Blueprint (normal flow)
+        // ============================================
         this.logger.info('Generating blueprint', { query, queryLength: query.length, imagesCount: initArgs.images?.length || 0 });
         this.logger.info(`Using language: ${language}, frameworks: ${frameworks ? frameworks.join(", ") : "none"}`);
         
@@ -734,94 +798,148 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
     }
 
     async handleUserInput(userMessage: string, images?: ImageAttachment[]): Promise<void> {
+        // Check if we're awaiting clarification from the gateway
+        if (this.state.awaitingClarification && this.pendingInitArgs) {
+            this.logger.info('Received clarification response from user', {
+                originalQuery: this.state.query,
+                userResponse: userMessage.slice(0, 100),
+            });
+
+            // Combine original query with user's clarification
+            const enhancedQuery = `${this.state.query}\n\nUser clarification: ${userMessage}`;
+            
+            // Clear the awaiting flag
+            this.setState({
+                ...this.state,
+                awaitingClarification: false,
+            });
+
+            // Now generate the blueprint with the enhanced query
+            const initArgs = this.pendingInitArgs;
+            this.pendingInitArgs = null;
+
+            // Stream a message to let user know we're proceeding
+            this.broadcast(WebSocketMessageResponses.CONVERSATION_RESPONSE, {
+                message: 'Got it! Let me build that for you...\n\n',
+                conversationId: IdGenerator.generateConversationId(),
+                isStreaming: false,
+            });
+
+            // Generate blueprint with enhanced query
+            await this.generateBlueprintAfterClarification(initArgs, enhancedQuery, images);
+            return;
+        }
+
+        // Normal flow - pass to conversation processor
         const result = await super.handleUserInput(userMessage, images);
         return result;
     }
 
-    // ============================================================================
-    // CONVERSATION-FIRST: Intent Detection
-    // ============================================================================
-    
     /**
-     * Detects if the user's query is an explicit request to BUILD/CREATE something.
-     * Returns true only for clear build intents, false for questions, greetings, or ambiguous messages.
+     * Generate blueprint after receiving user clarification
      */
-    private detectBuildIntent(query: string): boolean {
-        const normalizedQuery = query.toLowerCase().trim();
+    private async generateBlueprintAfterClarification(
+        initArgs: AgentInitArgs<PhasicState>,
+        enhancedQuery: string,
+        _images?: ImageAttachment[]
+    ): Promise<void> {
+        const { templateInfo, inferenceContext, hostname, sandboxSessionId } = initArgs;
         
-        // Short messages are usually not build requests
-        if (normalizedQuery.length < 10) {
-            return false;
+        if (!templateInfo || !templateInfo.templateDetails) {
+            this.logger.error('Missing template info for blueprint generation');
+            return;
         }
-        
-        // Greetings - definitely not build requests
-        const greetings = [
-            'hi', 'hello', 'hey', 'howdy', 'greetings', 'good morning', 
-            'good afternoon', 'good evening', 'whats up', "what's up",
-            'yo', 'sup', 'hiya'
-        ];
-        if (greetings.some(g => normalizedQuery === g || normalizedQuery.startsWith(g + ' ') || normalizedQuery.startsWith(g + ','))) {
-            return false;
+
+        this.logger.info('Generating blueprint after clarification', { 
+            enhancedQuery: enhancedQuery.slice(0, 100) 
+        });
+
+        try {
+            const blueprint = await generateBlueprint({
+                env: this.env,
+                inferenceContext,
+                query: enhancedQuery,
+                language: initArgs.language!,
+                frameworks: initArgs.frameworks!,
+                templateDetails: templateInfo.templateDetails,
+                templateMetaInfo: templateInfo.selection,
+                images: initArgs.images,
+                projectType: this.projectType,
+                stream: {
+                    chunk_size: 256,
+                    onChunk: (chunk) => {
+                        // Broadcast blueprint chunks via WebSocket
+                        this.broadcast(WebSocketMessageResponses.BLUEPRINT_CHUNK, { chunk });
+                    }
+                }
+            });
+
+            const packageJson = templateInfo.templateDetails.allFiles['package.json'];
+            const projectName = generateProjectName(
+                blueprint?.projectName || templateInfo.templateDetails.name || '',
+                generateNanoId(),
+                PhasicCodingBehavior.PROJECT_NAME_PREFIX_MAX_LENGTH
+            );
+
+            this.logger.info('Generated project name after clarification', { projectName });
+
+            // Update state with blueprint
+            this.setState({
+                ...this.state,
+                projectName,
+                query: enhancedQuery,
+                blueprint,
+                templateName: templateInfo.templateDetails.name,
+                sandboxInstanceId: undefined,
+                generatedPhases: [],
+                commandsHistory: [],
+                lastPackageJson: packageJson,
+                sessionId: sandboxSessionId!,
+                hostname,
+                metadata: inferenceContext.metadata,
+                projectType: this.projectType,
+                behaviorType: 'phasic',
+                awaitingClarification: false,
+            });
+
+            // Customize template files
+            const customizedFiles = customizeTemplateFiles(
+                templateInfo.templateDetails.allFiles,
+                {
+                    projectName,
+                    commandsHistory: []
+                }
+            );
+
+            this.logger.info('Customized template files', { 
+                files: Object.keys(customizedFiles) 
+            });
+
+            // Save customized files to git
+            const filesToSave = Object.entries(customizedFiles).map(([filePath, content]) => ({
+                filePath,
+                fileContents: content,
+                filePurpose: 'Project configuration file'
+            }));
+
+            await this.fileManager.saveGeneratedFiles(
+                filesToSave,
+                'Initialize project configuration files',
+                true
+            );
+
+            this.logger.info('Committed customized template files to git');
+
+            // Now start building
+            this.initializeAsync().catch((error: unknown) => {
+                this.broadcastError("Initialization failed", error);
+            });
+
+            this.logger.info(`Blueprint generated successfully after clarification`);
+
+        } catch (error) {
+            this.logger.error('Error generating blueprint after clarification', error);
+            this.broadcastError('Failed to generate blueprint', error);
         }
-        
-        // Questions - not build requests
-        const questionStarters = [
-            'what is', 'what are', 'what\'s', 'whats',
-            'how do', 'how does', 'how can', 'how to', 'how would',
-            'why do', 'why does', 'why is', 'why are',
-            'when do', 'when does', 'when is', 'when are',
-            'where do', 'where does', 'where is', 'where are',
-            'who is', 'who are', 'who does',
-            'can you explain', 'could you explain', 'please explain',
-            'tell me about', 'what do you think', 'do you know'
-        ];
-        if (questionStarters.some(q => normalizedQuery.startsWith(q))) {
-            return false;
-        }
-        
-        // Ends with question mark - probably a question
-        if (normalizedQuery.endsWith('?')) {
-            // Unless it contains explicit build verbs
-            const buildVerbs = ['build', 'create', 'make', 'generate', 'develop'];
-            const hasBuildVerb = buildVerbs.some(v => normalizedQuery.includes(v));
-            if (!hasBuildVerb) {
-                return false;
-            }
-        }
-        
-        // Explicit BUILD patterns - these ARE build requests
-        const buildPatterns = [
-            /^(please\s+)?(build|create|make|generate|develop|code|write|implement)\s+(me\s+)?(a|an|the)\s+/i,
-            /^(please\s+)?(build|create|make|generate|develop|code|write|implement)\s+/i,
-            /^(i\s+)?(want|need|would like)\s+(you\s+)?to\s+(build|create|make|generate|develop)/i,
-            /^(can|could|would)\s+you\s+(please\s+)?(build|create|make|generate|develop)/i,
-            /^let'?s\s+(build|create|make|generate|develop)/i,
-            /^start\s+(building|creating|making|generating|developing)/i,
-        ];
-        
-        if (buildPatterns.some(pattern => pattern.test(normalizedQuery))) {
-            return true;
-        }
-        
-        // Check for build verbs with app-related nouns
-        const hasBuildVerb = ['build', 'create', 'make', 'generate', 'develop', 'code', 'write', 'implement']
-            .some(v => normalizedQuery.includes(v));
-        const hasAppNoun = ['app', 'application', 'website', 'site', 'dashboard', 'tool', 'platform', 'system', 'page', 'component', 'ui', 'interface']
-            .some(n => normalizedQuery.includes(n));
-        
-        if (hasBuildVerb && hasAppNoun) {
-            return true;
-        }
-        
-        // If it's just a noun without any verb (e.g., "todo app"), it's ambiguous - NOT a build request
-        // The user should be asked for clarification
-        const justNoun = !['build', 'create', 'make', 'generate', 'develop', 'code', 'write', 'implement', 'want', 'need', 'like']
-            .some(v => normalizedQuery.includes(v));
-        if (justNoun) {
-            return false;
-        }
-        
-        // Default: if we're not sure, don't build
-        return false;
     }
 }

@@ -78,6 +78,9 @@ export interface PhasicState extends BaseProjectState {
     currentDevState: CurrentDevState;
     reviewCycles?: number;
     currentPhase?: PhaseConceptType;
+    
+    // Flag to indicate we're waiting for user clarification before building
+    awaitingClarification?: boolean;
 }
 
 export interface WorkflowMetadata {

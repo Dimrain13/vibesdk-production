@@ -18,7 +18,6 @@ import { GenerationContext } from '../domain/values/GenerationContext';
 import getSystemPrompt from './prompts/agenticBuilderPrompts';
 import { ToolDefinition } from '../tools/types';
 import { InferResponseString } from '../inferutils/core';
-// Core build tools
 import { createGenerateBlueprintTool } from '../tools/toolkit/generate-blueprint';
 import { createAlterBlueprintTool } from '../tools/toolkit/alter-blueprint';
 import { createInitSuitableTemplateTool } from '../tools/toolkit/init-suitable-template';
@@ -33,21 +32,7 @@ import { createExecCommandsTool } from '../tools/toolkit/exec-commands';
 import { createWaitTool } from '../tools/toolkit/wait';
 import { createGitTool } from '../tools/toolkit/git';
 import { createGenerateImagesTool } from '../tools/toolkit/generate-images';
-// E1-style tools - FULL PARITY with Emergent
 import { createAskHumanTool } from '../tools/toolkit/ask-human';
-import { createTestingAgentTool } from '../tools/toolkit/testing-agent';
-import { createIntegrationPlaybookTool } from '../tools/toolkit/integration-playbook';
-import { createDesignAgentTool } from '../tools/toolkit/design-agent';
-import { createTroubleshootAgentTool } from '../tools/toolkit/troubleshoot-agent';
-import { createSupportAgentTool } from '../tools/toolkit/support-agent';
-import { createFinishTool } from '../tools/toolkit/finish-tool';
-import { createCrawlTool } from '../tools/toolkit/crawl-tool';
-import { createScreenshotTool } from '../tools/toolkit/screenshot-tool';
-import { createImageGenerationTool } from '../tools/toolkit/image-generation-tool';
-import { createImageSelectorTool } from '../tools/toolkit/image-selector-tool';
-import { createFileAnalysisTool } from '../tools/toolkit/file-analysis-tool';
-import { createFileExtractionTool } from '../tools/toolkit/file-extraction-tool';
-import { toolWebSearchDefinition } from '../tools/toolkit/web-search';
 
 export interface AgenticProjectBuilderInputs {
     query: string;
@@ -175,19 +160,11 @@ export class AgenticProjectBuilderOperation extends AgentOperationWithTools<
         const hasTemplate = !!selectedTemplate;
         const isPresentationProject = projectType === 'presentation';
         const needsSandbox = !isPresentationProject && (hasTSX || projectType === 'app');
-        const isNewProject = !hasFiles && !hasPlan;
 
         const dynamicHints = [
-            // 🔴 PRIORITY: Interactive clarification for new projects
-            isNewProject
-                ? '- 🔴 NEW PROJECT DETECTED: Use ask_human FIRST to gather requirements before generating blueprint. Ask about: features, design preferences, tech stack, integrations needed. Only proceed after user confirms.'
-                : '',
-            !hasPlan && !isNewProject
+            !hasPlan
                 ? '- No plan detected: Start with generate_blueprint (optionally with prompt parameter) to establish PRD (title, projectName, description, colorPalette, frameworks, plan).'
-                : '',
-            hasPlan
-                ? '- Plan detected: proceed to implement milestones using generate_files/regenerate_file.'
-                : '',
+                : '- Plan detected: proceed to implement milestones using generate_files/regenerate_file.',
             needsSandbox && !hasTemplate
                 ? '- Interactive project without template: Use init_suitable_template() to let AI select and import best matching template before first deploy.'
                 : '',
@@ -263,41 +240,13 @@ export class AgenticProjectBuilderOperation extends AgentOperationWithTools<
         callbacks: ToolCallbacks
     ): ToolDefinition<unknown, unknown>[] {
         const { logger } = options;
+        const toolRenderer = callbacks.toolRenderer!;
         const onToolComplete = callbacks.onToolComplete;
         const streamCb = callbacks.streamCb || (() => {});
-        // Provide a no-op renderer if not provided
-        const toolRenderer: RenderToolCall = callbacks.toolRenderer || (() => {});
 
         let rawTools : ToolDefinition<any, any>[] = [
-            // ═══════════════════════════════════════════════════════════════
-            // 🔴 E1 PRIORITY TOOLS - Use these FIRST (Interactive Workflow)
-            // ═══════════════════════════════════════════════════════════════
-            createAskHumanTool(logger, toolRenderer, streamCb),  // Ask user for clarification
-            createFinishTool(logger, toolRenderer, streamCb),     // Summarize work
-            
-            // ═══════════════════════════════════════════════════════════════
-            // E1 AGENT TOOLS - Specialized sub-agents for complex tasks
-            // ═══════════════════════════════════════════════════════════════
-            createTestingAgentTool(session.agent, logger, toolRenderer, streamCb),        // Comprehensive testing
-            createIntegrationPlaybookTool(session.agent, logger, toolRenderer, streamCb), // 3rd party API guides
-            createDesignAgentTool(session.agent, logger, toolRenderer, streamCb),         // UI/UX guidelines
-            createTroubleshootAgentTool(session.agent, logger, toolRenderer, streamCb),   // RCA for persistent errors
-            createSupportAgentTool(logger, toolRenderer, streamCb),                       // Platform help
-            
-            // ═══════════════════════════════════════════════════════════════
-            // E1 MEDIA & FILE TOOLS
-            // ═══════════════════════════════════════════════════════════════
-            createScreenshotTool(logger, toolRenderer, streamCb),
-            createImageGenerationTool(logger, toolRenderer, streamCb),
-            createImageSelectorTool(logger, toolRenderer, streamCb),
-            createFileAnalysisTool(logger, toolRenderer, streamCb),
-            createFileExtractionTool(logger, toolRenderer, streamCb),
-            createCrawlTool(logger, toolRenderer, streamCb),
-            toolWebSearchDefinition,  // Web search
-            
-            // ═══════════════════════════════════════════════════════════════
-            // CORE BUILD TOOLS - Project generation & management
-            // ═══════════════════════════════════════════════════════════════
+            // User interaction - FIRST for priority
+            createAskHumanTool(logger, toolRenderer, streamCb),
             // PRD generation + refinement
             createGenerateBlueprintTool(session.agent, logger),
             createAlterBlueprintTool(session.agent, logger),
@@ -315,7 +264,7 @@ export class AgenticProjectBuilderOperation extends AgentOperationWithTools<
             createExecCommandsTool(session.agent, logger),
             createWaitTool(logger),
             createGitTool(session.agent, logger),
-            // Images
+            // WIP: images
             createGenerateImagesTool(session.agent, logger),
         ];
 
