@@ -46,6 +46,9 @@ interface PhasicOperations extends BaseCodingOperations {
 export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implements ICodingAgent {
     protected static readonly PROJECT_NAME_PREFIX_MAX_LENGTH = 20;
     
+    // Store pending init args when awaiting user clarification
+    protected pendingInitArgs: AgentInitArgs<PhasicState> | null = null;
+    
     protected operations: PhasicOperations = {
         regenerateFile: new FileRegenerationOperation(),
         fastCodeFixer: new FastCodeFixerOperation(),
@@ -58,6 +61,11 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
     /**
      * Initialize the code generator with project blueprint and template
      * Sets up services and begins deployment process
+     * 
+     * Flow based on classification:
+     * - CONVERSATION: Stream response, set up for WebSocket, no blueprint
+     * - BUILD_VAGUE: Stream question, set awaitingClarification, no blueprint
+     * - BUILD_CLEAR: Normal flow - generate blueprint and build
      */
     async initialize(
         initArgs: AgentInitArgs<PhasicState>,
@@ -68,9 +76,101 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
         if (!templateInfo || !templateInfo.templateDetails) {
             throw new Error('Phasic initialization requires templateInfo.templateDetails');
         }
-        const { query, language, frameworks, hostname, inferenceContext, sandboxSessionId } = initArgs;
+        let { query, language, frameworks, hostname, inferenceContext, sandboxSessionId } = initArgs;
+        const classificationType = initArgs.classificationType || 'build_clear';
         
-        // Generate a blueprint
+        this.logger.info('Initializing with classification', { 
+            classificationType,
+            query: query.slice(0, 100) 
+        });
+        
+        // ============================================
+        // Handle CONVERSATION type
+        // ============================================
+        if (classificationType === 'conversation') {
+            this.logger.info('Conversation mode - streaming response');
+            
+            // Stream the conversation response
+            const response = initArgs.classificationResponse || "Hi! I'm Orbit, your coding assistant. What would you like to build today?";
+            initArgs.onBlueprintChunk(response);
+            
+            // Set up minimal state for WebSocket
+            const packageJson = templateInfo.templateDetails.allFiles['package.json'];
+            const projectName = generateProjectName(
+                'conversation',
+                generateNanoId(),
+                PhasicCodingBehavior.PROJECT_NAME_PREFIX_MAX_LENGTH
+            );
+            
+            const conversationState: PhasicState = {
+                ...this.state,
+                projectName,
+                query,
+                blueprint: {} as any,
+                templateName: templateInfo.templateDetails.name,
+                sandboxInstanceId: undefined,
+                generatedPhases: [],
+                commandsHistory: [],
+                lastPackageJson: packageJson,
+                sessionId: sandboxSessionId!,
+                hostname,
+                metadata: inferenceContext.metadata,
+                projectType: this.projectType,
+                behaviorType: 'phasic',
+                awaitingClarification: true, // Ready to receive follow-up
+            };
+            this.setState(conversationState);
+            this.pendingInitArgs = initArgs;
+            
+            this.logger.info('Agent ready for conversation');
+            return this.state;
+        }
+        
+        // ============================================
+        // Handle BUILD_VAGUE type
+        // ============================================
+        if (classificationType === 'build_vague') {
+            this.logger.info('Vague request - streaming clarification question');
+            
+            // Stream the clarification question
+            const question = initArgs.clarificationQuestion || "Could you provide more details about what you want to build?";
+            initArgs.onBlueprintChunk(question);
+            
+            // Set up state awaiting clarification
+            const packageJson = templateInfo.templateDetails.allFiles['package.json'];
+            const projectName = generateProjectName(
+                'project',
+                generateNanoId(),
+                PhasicCodingBehavior.PROJECT_NAME_PREFIX_MAX_LENGTH
+            );
+            
+            const awaitingState: PhasicState = {
+                ...this.state,
+                projectName,
+                query,
+                blueprint: {} as any,
+                templateName: templateInfo.templateDetails.name,
+                sandboxInstanceId: undefined,
+                generatedPhases: [],
+                commandsHistory: [],
+                lastPackageJson: packageJson,
+                sessionId: sandboxSessionId!,
+                hostname,
+                metadata: inferenceContext.metadata,
+                projectType: this.projectType,
+                behaviorType: 'phasic',
+                awaitingClarification: true,
+            };
+            this.setState(awaitingState);
+            this.pendingInitArgs = initArgs;
+            
+            this.logger.info('Agent awaiting user clarification');
+            return this.state;
+        }
+        
+        // ============================================
+        // BUILD_CLEAR - Normal flow: Generate Blueprint
+        // ============================================
         this.logger.info('Generating blueprint', { query, queryLength: query.length, imagesCount: initArgs.images?.length || 0 });
         this.logger.info(`Using language: ${language}, frameworks: ${frameworks ? frameworks.join(", ") : "none"}`);
         
@@ -722,7 +822,148 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
     }
 
     async handleUserInput(userMessage: string, images?: ImageAttachment[]): Promise<void> {
+        // Check if we're awaiting clarification from the gateway
+        if (this.state.awaitingClarification && this.pendingInitArgs) {
+            this.logger.info('Received clarification response from user', {
+                originalQuery: this.state.query,
+                userResponse: userMessage.slice(0, 100),
+            });
+
+            // Combine original query with user's clarification
+            const enhancedQuery = `${this.state.query}\n\nUser clarification: ${userMessage}`;
+            
+            // Clear the awaiting flag
+            this.setState({
+                ...this.state,
+                awaitingClarification: false,
+            });
+
+            // Now generate the blueprint with the enhanced query
+            const initArgs = this.pendingInitArgs;
+            this.pendingInitArgs = null;
+
+            // Stream a message to let user know we're proceeding
+            this.broadcast(WebSocketMessageResponses.CONVERSATION_RESPONSE, {
+                message: 'Got it! Let me build that for you...\n\n',
+                conversationId: IdGenerator.generateConversationId(),
+                isStreaming: false,
+            });
+
+            // Generate blueprint with enhanced query
+            await this.generateBlueprintAfterClarification(initArgs, enhancedQuery, images);
+            return;
+        }
+
+        // Normal flow - pass to conversation processor
         const result = await super.handleUserInput(userMessage, images);
         return result;
+    }
+
+    /**
+     * Generate blueprint after receiving user clarification
+     */
+    private async generateBlueprintAfterClarification(
+        initArgs: AgentInitArgs<PhasicState>,
+        enhancedQuery: string,
+        _images?: ImageAttachment[]
+    ): Promise<void> {
+        const { templateInfo, inferenceContext, hostname, sandboxSessionId } = initArgs;
+        
+        if (!templateInfo || !templateInfo.templateDetails) {
+            this.logger.error('Missing template info for blueprint generation');
+            return;
+        }
+
+        this.logger.info('Generating blueprint after clarification', { 
+            enhancedQuery: enhancedQuery.slice(0, 100) 
+        });
+
+        try {
+            const blueprint = await generateBlueprint({
+                env: this.env,
+                inferenceContext,
+                query: enhancedQuery,
+                language: initArgs.language!,
+                frameworks: initArgs.frameworks!,
+                templateDetails: templateInfo.templateDetails,
+                templateMetaInfo: templateInfo.selection,
+                images: initArgs.images,
+                projectType: this.projectType,
+                stream: {
+                    chunk_size: 256,
+                    onChunk: (chunk) => {
+                        // Broadcast blueprint chunks via WebSocket
+                        this.broadcast(WebSocketMessageResponses.BLUEPRINT_CHUNK, { chunk });
+                    }
+                }
+            });
+
+            const packageJson = templateInfo.templateDetails.allFiles['package.json'];
+            const projectName = generateProjectName(
+                blueprint?.projectName || templateInfo.templateDetails.name || '',
+                generateNanoId(),
+                PhasicCodingBehavior.PROJECT_NAME_PREFIX_MAX_LENGTH
+            );
+
+            this.logger.info('Generated project name after clarification', { projectName });
+
+            // Update state with blueprint
+            this.setState({
+                ...this.state,
+                projectName,
+                query: enhancedQuery,
+                blueprint,
+                templateName: templateInfo.templateDetails.name,
+                sandboxInstanceId: undefined,
+                generatedPhases: [],
+                commandsHistory: [],
+                lastPackageJson: packageJson,
+                sessionId: sandboxSessionId!,
+                hostname,
+                metadata: inferenceContext.metadata,
+                projectType: this.projectType,
+                behaviorType: 'phasic',
+                awaitingClarification: false,
+            });
+
+            // Customize template files
+            const customizedFiles = customizeTemplateFiles(
+                templateInfo.templateDetails.allFiles,
+                {
+                    projectName,
+                    commandsHistory: []
+                }
+            );
+
+            this.logger.info('Customized template files', { 
+                files: Object.keys(customizedFiles) 
+            });
+
+            // Save customized files to git
+            const filesToSave = Object.entries(customizedFiles).map(([filePath, content]) => ({
+                filePath,
+                fileContents: content,
+                filePurpose: 'Project configuration file'
+            }));
+
+            await this.fileManager.saveGeneratedFiles(
+                filesToSave,
+                'Initialize project configuration files',
+                true
+            );
+
+            this.logger.info('Committed customized template files to git');
+
+            // Now start building
+            this.initializeAsync().catch((error: unknown) => {
+                this.broadcastError("Initialization failed", error);
+            });
+
+            this.logger.info(`Blueprint generated successfully after clarification`);
+
+        } catch (error) {
+            this.logger.error('Error generating blueprint after clarification', error);
+            this.broadcastError('Failed to generate blueprint', error);
+        }
     }
 }

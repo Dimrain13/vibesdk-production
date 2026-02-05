@@ -32,6 +32,19 @@ import { createExecCommandsTool } from '../tools/toolkit/exec-commands';
 import { createWaitTool } from '../tools/toolkit/wait';
 import { createGitTool } from '../tools/toolkit/git';
 import { createGenerateImagesTool } from '../tools/toolkit/generate-images';
+// E1-style tools for interactive behavior
+import { createAskHumanTool } from '../tools/toolkit/ask-human';
+import { createFinishTool } from '../tools/toolkit/finish-tool';
+import { createTestingAgentTool } from '../tools/toolkit/testing-agent';
+import { createDesignAgentTool } from '../tools/toolkit/design-agent';
+import { createIntegrationPlaybookTool } from '../tools/toolkit/integration-playbook';
+import { createTroubleshootAgentTool } from '../tools/toolkit/troubleshoot-agent';
+import { createSupportAgentTool } from '../tools/toolkit/support-agent';
+import { toolWebSearchDefinition } from '../tools/toolkit/web-search';
+import { createCrawlTool } from '../tools/toolkit/crawl-tool';
+import { createScreenshotTool } from '../tools/toolkit/screenshot-tool';
+// Code quality tools
+import { createCodeReviewAgentTool } from '../tools/toolkit/code-review-agent';
 
 export interface AgenticProjectBuilderInputs {
     query: string;
@@ -239,10 +252,34 @@ export class AgenticProjectBuilderOperation extends AgentOperationWithTools<
         callbacks: ToolCallbacks
     ): ToolDefinition<unknown, unknown>[] {
         const { logger } = options;
-        const toolRenderer = callbacks.toolRenderer;
+        const toolRenderer = callbacks.toolRenderer!;
         const onToolComplete = callbacks.onToolComplete;
+        const streamCb = callbacks.streamCb || (() => {});
+
+        // Detect if this is a new project (no files, no plan)
+        const isNewProject = !session.hasFiles && !session.hasPlan;
 
         let rawTools : ToolDefinition<any, any>[] = [
+            // ===== E1 PRIORITY TOOLS (User Interaction) =====
+            createAskHumanTool(logger, toolRenderer, streamCb),
+            createFinishTool(logger, toolRenderer, streamCb),
+            
+            // ===== E1 AGENT TOOLS (Specialized Sub-agents) =====
+            createTestingAgentTool(session.agent, logger, toolRenderer, streamCb),
+            createDesignAgentTool(session.agent, logger, toolRenderer, streamCb),
+            createIntegrationPlaybookTool(session.agent, logger, toolRenderer, streamCb),
+            createTroubleshootAgentTool(session.agent, logger, toolRenderer, streamCb),
+            createSupportAgentTool(logger, toolRenderer, streamCb),
+            
+            // ===== CODE QUALITY TOOLS =====
+            createCodeReviewAgentTool(session.agent, logger, toolRenderer, streamCb),
+            
+            // ===== E1 WEB/MEDIA TOOLS =====
+            toolWebSearchDefinition, // Already a tool definition
+            createCrawlTool(logger, toolRenderer, streamCb),
+            createScreenshotTool(logger, toolRenderer, streamCb),
+            
+            // ===== CORE BUILD TOOLS =====
             // PRD generation + refinement
             createGenerateBlueprintTool(session.agent, logger),
             createAlterBlueprintTool(session.agent, logger),
@@ -271,6 +308,13 @@ export class AgenticProjectBuilderOperation extends AgentOperationWithTools<
         rawTools = withRenderer(rawTools, toolRenderer, onToolComplete);
 
         rawTools.push(createMarkGenerationCompleteTool(session.agent, logger));
+
+        // Log tool availability for debugging
+        logger.info('E1-style tools loaded', {
+            isNewProject,
+            toolCount: rawTools.length,
+            tools: rawTools.map(t => t.name),
+        });
 
         return rawTools;
     }

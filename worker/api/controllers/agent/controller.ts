@@ -23,6 +23,7 @@ import { ImageType, uploadImage } from 'worker/utils/images';
 import { ProcessedImageAttachment } from 'worker/types/image-attachment';
 import { getTemplateImportantFiles } from 'worker/services/sandbox/utils';
 import { hasTicketParam } from '../../../middleware/auth/ticketAuth';
+import { classifyRequest } from './RequestClassifier';
 
 const defaultCodeGenArgs: Partial<CodeGenArgs> = {
     language: 'typescript',
@@ -140,7 +141,35 @@ export class CodingAgentController extends BaseController {
             });
             this.logger.info(`Creating project of type: ${projectType}`);
 
-            const { templateDetails, selection, projectType: finalProjectType } = await getTemplateForQuery(env, inferenceContext, query, projectType, body.images, this.logger);
+            // ============================================
+            // STEP 1: Classify the request BEFORE creating agent
+            // ============================================
+            this.logger.info('Classifying request before agent creation');
+            
+            const classification = await classifyRequest(
+                query,
+                env,
+                inferenceContext,
+                this.logger
+                // Don't stream classification - we'll handle output ourselves
+            );
+
+            this.logger.info('Request classification result', {
+                type: classification.type,
+                reasoning: classification.reasoning,
+            });
+
+            // For ALL types, we now create an agent so WebSocket exists for follow-ups
+            // The difference is what we do after agent creation
+
+            // ============================================
+            // STEP 2: Get template and create agent (for all types)
+            // ============================================
+            const finalQuery = classification.type === 'build_clear' 
+                ? (classification.enhancedQuery || query)
+                : query;
+
+            const { templateDetails, selection, projectType: finalProjectType } = await getTemplateForQuery(env, inferenceContext, finalQuery, projectType, body.images, this.logger);
 
             const websocketUrl = `${url.protocol === 'https:' ? 'wss:' : 'ws:'}//${url.host}/api/agent/${agentId}/ws`;
             const httpStatusUrl = `${url.origin}/api/agent/${agentId}`;
@@ -167,19 +196,36 @@ export class CodingAgentController extends BaseController {
             const agentInstance = await getAgentStub(env, agentId, { behaviorType, projectType: finalProjectType });
 
             const baseInitArgs = {
-                query,
+                query: finalQuery,
                 language: body.language || defaultCodeGenArgs.language,
                 frameworks: body.frameworks || defaultCodeGenArgs.frameworks,
                 hostname,
                 inferenceContext,
                 images: uploadedImages,
                 onBlueprintChunk: (chunk: string) => {
-                    writer.write({chunk});
+                    // For conversation/clarification, we use conversationChunk instead of chunk
+                    if (classification.type === 'conversation' || classification.type === 'build_vague') {
+                        writer.write({ conversationChunk: chunk });
+                    } else {
+                        writer.write({ chunk });
+                    }
                 },
+                // Pass classification info to agent
+                classificationType: classification.type,
+                classificationResponse: classification.response,
+                clarificationQuestion: classification.clarificationQuestion,
             } as const;
 
             const initArgs = { ...baseInitArgs, templateInfo: { templateDetails, selection } }
 
+            // Send the type marker first so frontend knows what to expect
+            if (classification.type === 'conversation') {
+                writer.write({ type: 'conversation' });
+            } else if (classification.type === 'build_vague') {
+                writer.write({ type: 'clarification' });
+            }
+
+            // Initialize agent - it will handle different classification types internally
             const agentPromise = agentInstance.initialize(initArgs) as Promise<AgentState>;
             agentPromise.then(async (_state: AgentState) => {
                 writer.write("terminate");

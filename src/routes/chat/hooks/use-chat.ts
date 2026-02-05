@@ -486,6 +486,7 @@ export function useChat({
 					};
 
 					let startedBlueprintStream = false;
+					let isConversationMode = false; // Track if we're in conversation/clarification mode
 					const initialBehaviorType = getBehaviorTypeForProject(projectType);
 					if (initialBehaviorType === 'phasic') {
 						sendMessage(
@@ -495,6 +496,22 @@ export function useChat({
 
 					for await (const obj of ndjsonStream(response.stream)) {
                         logger.debug('Received chunk from server:', obj);
+						
+						// Handle conversation mode - no agent/blueprint needed
+						if (obj.type === 'conversation' || obj.type === 'clarification') {
+							logger.info('Received conversation/clarification response');
+							isConversationMode = true;
+							setIsBootstrapping(false);
+							// Don't set blueprint generation flags
+							continue;
+						}
+						
+						// Handle conversation/clarification text chunks
+						if (obj.conversationChunk) {
+							sendMessage(createAIMessage('main', obj.conversationChunk, false));
+							continue;
+						}
+						
 						if (obj.chunk) {
 							if (!startedBlueprintStream) {
 								sendMessage(createAIMessage('main', 'Blueprint is being generated...', true));
@@ -538,10 +555,18 @@ export function useChat({
 						}
 					}
 
+					// Skip blueprint completion steps if we were in conversation mode
+					if (isConversationMode) {
+						logger.info('Conversation mode - skipping blueprint completion');
+						setIsBootstrapping(false);
+						setIsGeneratingBlueprint(false);
+						return;
+					}
+
 					updateStage('blueprint', { status: 'completed' });
 					setIsGeneratingBlueprint(false);
 					const finalBehaviorType = getBehaviorTypeForProject(projectType);
-					if (finalBehaviorType === 'phasic') {
+					if (finalBehaviorType === 'phasic' && startedBlueprintStream) {
 						sendMessage(
 							createAIMessage('main', 'Blueprint generation complete. Now starting the code generation...', true),
 						);
