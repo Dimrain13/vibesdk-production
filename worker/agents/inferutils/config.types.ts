@@ -33,84 +33,15 @@ const MODELS_MASTER = {
             contextSize: 0,
         }
     },
-
-    // ============================================
     // --- Google Models ---
-    // ============================================
-    
-    // Gemini 1.5 Series
-    GEMINI_1_5_PRO: {
-        id: 'google-ai-studio/gemini-1.5-pro',
-        config: {
-            name: 'Gemini 1.5 Pro',
-            size: ModelSize.LARGE,
-            provider: 'google-ai-studio',
-            creditCost: 3,
-            contextSize: 2097152, // 2M Context
-        }
-    },
-    GEMINI_1_5_FLASH: {
-        id: 'google-ai-studio/gemini-1.5-flash',
-        config: {
-            name: 'Gemini 1.5 Flash',
-            size: ModelSize.REGULAR,
-            provider: 'google-ai-studio',
-            creditCost: 0.6,
-            contextSize: 1048576, // 1M Context
-        }
-    },
-    GEMINI_1_5_FLASH_8B: {
-        id: 'google-ai-studio/gemini-1.5-flash-8b',
-        config: {
-            name: 'Gemini 1.5 Flash 8B',
-            size: ModelSize.LITE,
-            provider: 'google-ai-studio',
-            creditCost: 0.3,
-            contextSize: 1048576,
-        }
-    },
-
-    // Gemini 2.0 Series
-    GEMINI_2_0_FLASH: {
-        id: 'google-ai-studio/gemini-2.0-flash',
-        config: {
-            name: 'Gemini 2.0 Flash',
-            size: ModelSize.REGULAR,
-            provider: 'google-ai-studio',
-            creditCost: 0.8,
-            contextSize: 1048576,
-        }
-    },
-    GEMINI_2_0_FLASH_LITE: {
-        id: 'google-ai-studio/gemini-2.0-flash-lite',
-        config: {
-            name: 'Gemini 2.0 Flash Lite',
-            size: ModelSize.LITE,
-            provider: 'google-ai-studio',
-            creditCost: 0.3,
-            contextSize: 1048576,
-        }
-    },
-    GEMINI_2_0_FLASH_THINKING: {
-        id: 'google-ai-studio/gemini-2.0-flash-thinking-exp',
-        config: {
-            name: 'Gemini 2.0 Flash Thinking',
-            size: ModelSize.REGULAR,
-            provider: 'google-ai-studio',
-            creditCost: 1.5,
-            contextSize: 1048576,
-        }
-    },
-
-    // Gemini 2.5 Series
     GEMINI_2_5_PRO: {
         id: 'google-ai-studio/gemini-2.5-pro',
         config: {
             name: 'Gemini 2.5 Pro',
             size: ModelSize.LARGE,
             provider: 'google-ai-studio',
-            creditCost: 5,
-            contextSize: 1048576,
+            creditCost: 5,   // $1.25
+            contextSize: 1048576, // 1M Context
         }
     },
     GEMINI_2_5_FLASH: {
@@ -119,8 +50,8 @@ const MODELS_MASTER = {
             name: 'Gemini 2.5 Flash',
             size: ModelSize.REGULAR,
             provider: 'google-ai-studio',
-            creditCost: 1.2,
-            contextSize: 1048576,
+            creditCost: 1.2, // $0.30
+            contextSize: 1048576, // 1M Context
         }
     },
     GEMINI_2_5_FLASH_LITE: {
@@ -129,8 +60,8 @@ const MODELS_MASTER = {
             name: 'Gemini 2.5 Flash-Lite',
             size: ModelSize.LITE,
             provider: 'google-ai-studio',
-            creditCost: 0.4,
-            contextSize: 1048576,
+            creditCost: 0.4, // $0.10
+            contextSize: 1048576, // 1M Context
         }
     },
     GEMINI_2_5_FLASH_LATEST: {
@@ -139,7 +70,7 @@ const MODELS_MASTER = {
             name: 'Gemini 2.5 Flash (Latest)',
             size: ModelSize.REGULAR,
             provider: 'google-ai-studio',
-            creditCost: 1.2,
+            creditCost: 1.2, // $0.30
             contextSize: 1048576,
         }
     },
@@ -149,7 +80,7 @@ const MODELS_MASTER = {
             name: 'Gemini 2.5 Flash-Lite (Latest)',
             size: ModelSize.LITE,
             provider: 'google-ai-studio',
-            creditCost: 0.4,
+            creditCost: 0.4, // $0.10
             contextSize: 1048576,
         }
     },
@@ -159,19 +90,17 @@ const MODELS_MASTER = {
             name: 'Gemini 2.5 Pro (Latest)',
             size: ModelSize.LARGE,
             provider: 'google-ai-studio',
-            creditCost: 5,
+            creditCost: 5, // $1.25
             contextSize: 1048576,
         }
     },
-
-    // Gemini 3.0 Series (Preview)
     GEMINI_3_PRO_PREVIEW: {
         id: 'google-ai-studio/gemini-3-pro-preview',
         config: {
             name: 'Gemini 3.0 Pro Preview',
             size: ModelSize.LARGE,
             provider: 'google-ai-studio',
-            creditCost: 8,
+            creditCost: 8, // $2.00 (Preview Pricing)
             contextSize: 1048576,
         }
     },
@@ -181,122 +110,40 @@ const MODELS_MASTER = {
             name: 'Gemini 3.0 Flash Preview',
             size: ModelSize.REGULAR,
             provider: 'google-ai-studio',
-            creditCost: 2,
-            contextSize: 1048576,
+            creditCost: 2, // $0.5
+            contextSize: 1048576, // 1M Context
         }
     },
 
-    // ============================================
     // --- Anthropic Models ---
-    // ============================================
-    
-    // Claude 3 Series
-    CLAUDE_3_OPUS: {
-        id: 'anthropic/claude-3-opus-20240229',
-        config: {
-            name: 'Claude 3 Opus',
-            size: ModelSize.LARGE,
-            provider: 'anthropic',
-            creditCost: 60, // $15.00
-            contextSize: 200000,
-        }
-    },
-    CLAUDE_3_SONNET: {
-        id: 'anthropic/claude-3-sonnet-20240229',
-        config: {
-            name: 'Claude 3 Sonnet',
-            size: ModelSize.REGULAR,
-            provider: 'anthropic',
-            creditCost: 12, // $3.00
-            contextSize: 200000,
-        }
-    },
-    CLAUDE_3_HAIKU: {
-        id: 'anthropic/claude-3-haiku-20240307',
-        config: {
-            name: 'Claude 3 Haiku',
-            size: ModelSize.LITE,
-            provider: 'anthropic',
-            creditCost: 1, // $0.25
-            contextSize: 200000,
-        }
-    },
-
-    // Claude 3.5 Series
-    CLAUDE_3_5_SONNET: {
-        id: 'anthropic/claude-3-5-sonnet-20241022',
-        config: {
-            name: 'Claude 3.5 Sonnet',
-            size: ModelSize.LARGE,
-            provider: 'anthropic',
-            creditCost: 12, // $3.00
-            contextSize: 200000,
-        }
-    },
-    CLAUDE_3_5_SONNET_V2: {
-        id: 'anthropic/claude-3-5-sonnet-v2-20241022',
-        config: {
-            name: 'Claude 3.5 Sonnet v2',
-            size: ModelSize.LARGE,
-            provider: 'anthropic',
-            creditCost: 12,
-            contextSize: 200000,
-        }
-    },
-    CLAUDE_3_5_HAIKU: {
-        id: 'anthropic/claude-3-5-haiku-20241022',
-        config: {
-            name: 'Claude 3.5 Haiku',
-            size: ModelSize.LITE,
-            provider: 'anthropic',
-            creditCost: 3, // $0.80
-            contextSize: 200000,
-        }
-    },
-
-    // Claude 3.7 Series
-    CLAUDE_3_7_SONNET: {
+    CLAUDE_3_7_SONNET_20250219: {
         id: 'anthropic/claude-3-7-sonnet-20250219',
         config: {
             name: 'Claude 3.7 Sonnet',
             size: ModelSize.LARGE,
             provider: 'anthropic',
-            creditCost: 12,
-            contextSize: 200000,
+            creditCost: 12, // $3.00
+            contextSize: 200000, // 200K Context
         }
     },
-
-    // Claude 4 Series
     CLAUDE_4_SONNET: {
         id: 'anthropic/claude-sonnet-4-20250514',
         config: {
             name: 'Claude 4 Sonnet',
             size: ModelSize.LARGE,
             provider: 'anthropic',
-            creditCost: 12,
-            contextSize: 200000,
+            creditCost: 12, // $3.00
+            contextSize: 200000, // 200K Context
         }
     },
-    CLAUDE_4_OPUS: {
-        id: 'anthropic/claude-opus-4-20250514',
-        config: {
-            name: 'Claude 4 Opus',
-            size: ModelSize.LARGE,
-            provider: 'anthropic',
-            creditCost: 20,
-            contextSize: 200000,
-        }
-    },
-
-    // Claude 4.5 Series
     CLAUDE_4_5_SONNET: {
         id: 'anthropic/claude-sonnet-4-5',
         config: {
             name: 'Claude 4.5 Sonnet',
             size: ModelSize.LARGE,
             provider: 'anthropic',
-            creditCost: 12,
-            contextSize: 200000,
+            creditCost: 12, // $3.00
+            contextSize: 200000, // 200K Context
         }
     },
     CLAUDE_4_5_OPUS: {
@@ -305,8 +152,8 @@ const MODELS_MASTER = {
             name: 'Claude 4.5 Opus',
             size: ModelSize.LARGE,
             provider: 'anthropic',
-            creditCost: 20,
-            contextSize: 200000,
+            creditCost: 20, // $5.00
+            contextSize: 200000, // 200K Context
         }
     },
     CLAUDE_4_5_HAIKU: {
@@ -315,118 +162,20 @@ const MODELS_MASTER = {
             name: 'Claude 4.5 Haiku',
             size: ModelSize.REGULAR,
             provider: 'anthropic',
-            creditCost: 4,
-            contextSize: 200000,
+            creditCost: 4, // ~$1
+            contextSize: 200000, // 200K Context
         }
     },
 
-    // ============================================
     // --- OpenAI Models ---
-    // ============================================
-    
-    // GPT-4 Series
-    GPT_4: {
-        id: 'openai/gpt-4',
-        config: {
-            name: 'GPT-4',
-            size: ModelSize.LARGE,
-            provider: 'openai',
-            creditCost: 12,
-            contextSize: 8192,
-        }
-    },
-    GPT_4_TURBO: {
-        id: 'openai/gpt-4-turbo',
-        config: {
-            name: 'GPT-4 Turbo',
-            size: ModelSize.LARGE,
-            provider: 'openai',
-            creditCost: 4,
-            contextSize: 128000,
-        }
-    },
-    GPT_4O: {
-        id: 'openai/gpt-4o',
-        config: {
-            name: 'GPT-4o',
-            size: ModelSize.LARGE,
-            provider: 'openai',
-            creditCost: 2,
-            contextSize: 128000,
-        }
-    },
-    GPT_4O_MINI: {
-        id: 'openai/gpt-4o-mini',
-        config: {
-            name: 'GPT-4o Mini',
-            size: ModelSize.LITE,
-            provider: 'openai',
-            creditCost: 0.6,
-            contextSize: 128000,
-        }
-    },
-
-    // O1/O3 Reasoning Series
-    O1: {
-        id: 'openai/o1',
-        config: {
-            name: 'O1',
-            size: ModelSize.LARGE,
-            provider: 'openai',
-            creditCost: 60,
-            contextSize: 200000,
-        }
-    },
-    O1_MINI: {
-        id: 'openai/o1-mini',
-        config: {
-            name: 'O1 Mini',
-            size: ModelSize.REGULAR,
-            provider: 'openai',
-            creditCost: 12,
-            contextSize: 128000,
-        }
-    },
-    O1_PRO: {
-        id: 'openai/o1-pro',
-        config: {
-            name: 'O1 Pro',
-            size: ModelSize.LARGE,
-            provider: 'openai',
-            creditCost: 600,
-            contextSize: 200000,
-        }
-    },
-    O3_MINI: {
-        id: 'openai/o3-mini',
-        config: {
-            name: 'O3 Mini',
-            size: ModelSize.REGULAR,
-            provider: 'openai',
-            creditCost: 4,
-            contextSize: 200000,
-        }
-    },
-    O4_MINI: {
-        id: 'openai/o4-mini',
-        config: {
-            name: 'O4 Mini',
-            size: ModelSize.REGULAR,
-            provider: 'openai',
-            creditCost: 5,
-            contextSize: 200000,
-        }
-    },
-
-    // GPT-5 Series
     OPENAI_5: {
         id: 'openai/gpt-5',
         config: {
             name: 'GPT-5',
             size: ModelSize.LARGE,
             provider: 'openai',
-            creditCost: 5,
-            contextSize: 400000,
+            creditCost: 5, // $1.25
+            contextSize: 400000, // 400K Context
         }
     },
     OPENAI_5_1: {
@@ -435,8 +184,8 @@ const MODELS_MASTER = {
             name: 'GPT-5.1',
             size: ModelSize.LARGE,
             provider: 'openai',
-            creditCost: 5,
-            contextSize: 400000,
+            creditCost: 5, // $1.25
+            contextSize: 400000, // 400K Context
         }
     },
     OPENAI_5_2: {
@@ -445,8 +194,8 @@ const MODELS_MASTER = {
             name: 'GPT-5.2',
             size: ModelSize.LARGE,
             provider: 'openai',
-            creditCost: 7,
-            contextSize: 400000,
+            creditCost: 7, // $1.75
+            contextSize: 400000, // 400K Context
         }
     },
     OPENAI_5_MINI: {
@@ -455,244 +204,8 @@ const MODELS_MASTER = {
             name: 'GPT-5 Mini',
             size: ModelSize.LITE,
             provider: 'openai',
-            creditCost: 1,
-            contextSize: 400000,
-        }
-    },
-
-    // ============================================
-    // --- Mistral Models ---
-    // ============================================
-    MISTRAL_LARGE: {
-        id: 'mistral/mistral-large-latest',
-        config: {
-            name: 'Mistral Large',
-            size: ModelSize.LARGE,
-            provider: 'mistral',
-            creditCost: 8,
-            contextSize: 128000,
-        }
-    },
-    MISTRAL_MEDIUM: {
-        id: 'mistral/mistral-medium-latest',
-        config: {
-            name: 'Mistral Medium',
-            size: ModelSize.REGULAR,
-            provider: 'mistral',
-            creditCost: 3,
-            contextSize: 32000,
-        }
-    },
-    MISTRAL_SMALL: {
-        id: 'mistral/mistral-small-latest',
-        config: {
-            name: 'Mistral Small',
-            size: ModelSize.LITE,
-            provider: 'mistral',
-            creditCost: 0.8,
-            contextSize: 32000,
-        }
-    },
-    MISTRAL_NEMO: {
-        id: 'mistral/open-mistral-nemo',
-        config: {
-            name: 'Mistral Nemo',
-            size: ModelSize.LITE,
-            provider: 'mistral',
-            creditCost: 0.6,
-            contextSize: 128000,
-        }
-    },
-    CODESTRAL: {
-        id: 'mistral/codestral-latest',
-        config: {
-            name: 'Codestral',
-            size: ModelSize.REGULAR,
-            provider: 'mistral',
-            creditCost: 1.2,
-            contextSize: 32000,
-        }
-    },
-    CODESTRAL_MAMBA: {
-        id: 'mistral/codestral-mamba-latest',
-        config: {
-            name: 'Codestral Mamba',
-            size: ModelSize.LITE,
-            provider: 'mistral',
-            creditCost: 1,
-            contextSize: 256000,
-        }
-    },
-
-    // ============================================
-    // --- DeepSeek Models ---
-    // ============================================
-    DEEPSEEK_CHAT: {
-        id: 'deepseek/deepseek-chat',
-        config: {
-            name: 'DeepSeek Chat',
-            size: ModelSize.REGULAR,
-            provider: 'deepseek',
-            creditCost: 1.1,
-            contextSize: 64000,
-        }
-    },
-    DEEPSEEK_CODER: {
-        id: 'deepseek/deepseek-coder',
-        config: {
-            name: 'DeepSeek Coder',
-            size: ModelSize.REGULAR,
-            provider: 'deepseek',
-            creditCost: 1.1,
-            contextSize: 64000,
-        }
-    },
-    DEEPSEEK_REASONER: {
-        id: 'deepseek/deepseek-reasoner',
-        config: {
-            name: 'DeepSeek Reasoner (R1)',
-            size: ModelSize.LARGE,
-            provider: 'deepseek',
-            creditCost: 2.2,
-            contextSize: 64000,
-        }
-    },
-
-    // ============================================
-    // --- Meta Llama Models ---
-    // ============================================
-    LLAMA_3_1_8B: {
-        id: 'meta/llama-3.1-8b-instruct',
-        config: {
-            name: 'Llama 3.1 8B',
-            size: ModelSize.LITE,
-            provider: 'meta',
-            creditCost: 0.2,
-            contextSize: 128000,
-        }
-    },
-    LLAMA_3_1_70B: {
-        id: 'meta/llama-3.1-70b-instruct',
-        config: {
-            name: 'Llama 3.1 70B',
-            size: ModelSize.REGULAR,
-            provider: 'meta',
-            creditCost: 1.8,
-            contextSize: 128000,
-        }
-    },
-    LLAMA_3_1_405B: {
-        id: 'meta/llama-3.1-405b-instruct',
-        config: {
-            name: 'Llama 3.1 405B',
-            size: ModelSize.LARGE,
-            provider: 'meta',
-            creditCost: 10,
-            contextSize: 128000,
-        }
-    },
-    LLAMA_3_2_1B: {
-        id: 'meta/llama-3.2-1b-instruct',
-        config: {
-            name: 'Llama 3.2 1B',
-            size: ModelSize.LITE,
-            provider: 'meta',
-            creditCost: 0.1,
-            contextSize: 128000,
-        }
-    },
-    LLAMA_3_2_3B: {
-        id: 'meta/llama-3.2-3b-instruct',
-        config: {
-            name: 'Llama 3.2 3B',
-            size: ModelSize.LITE,
-            provider: 'meta',
-            creditCost: 0.15,
-            contextSize: 128000,
-        }
-    },
-    LLAMA_3_2_11B_VISION: {
-        id: 'meta/llama-3.2-11b-vision-instruct',
-        config: {
-            name: 'Llama 3.2 11B Vision',
-            size: ModelSize.REGULAR,
-            provider: 'meta',
-            creditCost: 0.6,
-            contextSize: 128000,
-        }
-    },
-    LLAMA_3_2_90B_VISION: {
-        id: 'meta/llama-3.2-90b-vision-instruct',
-        config: {
-            name: 'Llama 3.2 90B Vision',
-            size: ModelSize.LARGE,
-            provider: 'meta',
-            creditCost: 3.5,
-            contextSize: 128000,
-        }
-    },
-    LLAMA_3_3_70B: {
-        id: 'meta/llama-3.3-70b-instruct',
-        config: {
-            name: 'Llama 3.3 70B',
-            size: ModelSize.REGULAR,
-            provider: 'meta',
-            creditCost: 1.2,
-            contextSize: 128000,
-        }
-    },
-    LLAMA_4_SCOUT: {
-        id: 'meta/llama-4-scout',
-        config: {
-            name: 'Llama 4 Scout',
-            size: ModelSize.REGULAR,
-            provider: 'meta',
-            creditCost: 0.8,
-            contextSize: 512000,
-        }
-    },
-    LLAMA_4_MAVERICK: {
-        id: 'meta/llama-4-maverick',
-        config: {
-            name: 'Llama 4 Maverick',
-            size: ModelSize.LARGE,
-            provider: 'meta',
-            creditCost: 2,
-            contextSize: 1048576,
-        }
-    },
-
-    // ============================================
-    // --- Cohere Models ---
-    // ============================================
-    COMMAND_R: {
-        id: 'cohere/command-r',
-        config: {
-            name: 'Command R',
-            size: ModelSize.REGULAR,
-            provider: 'cohere',
-            creditCost: 2,
-            contextSize: 128000,
-        }
-    },
-    COMMAND_R_PLUS: {
-        id: 'cohere/command-r-plus',
-        config: {
-            name: 'Command R+',
-            size: ModelSize.LARGE,
-            provider: 'cohere',
-            creditCost: 12,
-            contextSize: 128000,
-        }
-    },
-    COMMAND_A: {
-        id: 'cohere/command-a-03-2025',
-        config: {
-            name: 'Command A',
-            size: ModelSize.LARGE,
-            provider: 'cohere',
-            creditCost: 10,
-            contextSize: 256000,
+            creditCost: 1, // $0.25 (BASELINE)
+            contextSize: 400000, // 400K Context
         }
     },
     // Below configs are commented for now, may be supported in the future
@@ -855,7 +368,7 @@ export const LiteModels: AIModels[] = Object.values(MODELS_MASTER)
     .map((entry) => entry.id);
 
 export const RegularModels: AIModels[] = Object.values(MODELS_MASTER)
-    .filter((entry) => entry.config.size === ModelSize.REGULAR || entry.config.size === ModelSize.LITE)
+    .filter((entry) => entry.config.size === ModelSize.REGULAR || entry.config.size === ModelSize.LITE || entry.config.size === ModelSize.LARGE)
     .map((entry) => entry.id);
 
 export const AllModels: AIModels[] = Object.values(MODELS_MASTER)
@@ -894,12 +407,6 @@ export interface AgentConfig {
     conversationalResponse: ModelConfig;
     deepDebugger: ModelConfig;
     agenticProjectBuilder: ModelConfig;
-    /** Specialized agent for API/database integrations - uses more capable model */
-    integrationImplementation: ModelConfig;
-    /** Image generation from prompts */
-    imageGeneration: ModelConfig;
-    /** File and document analysis */
-    fileAnalysis: ModelConfig;
 }
 
 // Provider and reasoning effort types for validation

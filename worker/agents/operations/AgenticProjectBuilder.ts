@@ -32,7 +32,6 @@ import { createExecCommandsTool } from '../tools/toolkit/exec-commands';
 import { createWaitTool } from '../tools/toolkit/wait';
 import { createGitTool } from '../tools/toolkit/git';
 import { createGenerateImagesTool } from '../tools/toolkit/generate-images';
-import { createAskHumanTool } from '../tools/toolkit/ask-human';
 
 export interface AgenticProjectBuilderInputs {
     query: string;
@@ -240,13 +239,10 @@ export class AgenticProjectBuilderOperation extends AgentOperationWithTools<
         callbacks: ToolCallbacks
     ): ToolDefinition<unknown, unknown>[] {
         const { logger } = options;
-        const toolRenderer = callbacks.toolRenderer!;
+        const toolRenderer = callbacks.toolRenderer;
         const onToolComplete = callbacks.onToolComplete;
-        const streamCb = callbacks.streamCb || (() => {});
 
         let rawTools : ToolDefinition<any, any>[] = [
-            // User interaction - FIRST for priority
-            createAskHumanTool(logger, toolRenderer, streamCb),
             // PRD generation + refinement
             createGenerateBlueprintTool(session.agent, logger),
             createAlterBlueprintTool(session.agent, logger),

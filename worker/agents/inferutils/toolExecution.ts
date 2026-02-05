@@ -187,23 +187,6 @@ export async function executeToolCallsWithDependencies(
 		toolDefinitions.map((td) => [td.name, td])
 	);
 
-	// PRIORITY CHECK: If ask_human is in the tool calls, ONLY execute ask_human
-	// This ensures the agent stops and waits for user input instead of continuing with other tools
-	const askHumanCall = toolCalls.find(tc => tc.function.name === 'ask_human');
-	if (askHumanCall) {
-		console.log(`[TOOL_EXECUTION] ask_human detected - executing ONLY ask_human, skipping ${toolCalls.length - 1} other tool(s)`);
-		
-		const toolDef = toolDefMap.get('ask_human');
-		if (!toolDef) {
-			throw new Error('ask_human tool definition not found');
-		}
-		
-		const result = await executeSingleTool(askHumanCall, toolDef);
-		console.log(`[TOOL_EXECUTION] ask_human completed - halting further tool execution`);
-		
-		return [result];
-	}
-
 	// Build execution plan
 	const plan = buildExecutionPlan(toolCalls, toolDefMap);
 

@@ -32,9 +32,10 @@ const defaultCodeGenArgs: Partial<CodeGenArgs> = {
 
 const resolveBehaviorType = (body: CodeGenArgs): BehaviorType => {
     if (body.behaviorType) return body.behaviorType;
-    // Default to agentic for interactive behavior
-    // Use phasic only when explicitly requested
-    return 'agentic';
+    const pt = body.projectType;
+    if (pt === 'presentation' || pt === 'workflow' || pt === 'general') return 'agentic';
+    // default (including 'app' and when projectType omitted)
+    return 'phasic';
 };
 
 const resolveProjectType = (body: CodeGenArgs): ProjectType | 'auto' => {

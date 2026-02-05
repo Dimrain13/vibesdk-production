@@ -1,93 +1,57 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Node
-node_modules/
+# Logs
+logs
+*.log*
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-build/
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+pnpm-debug.log*
+lerna-debug.log*
 
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+node_modules
+dist
+ dist-ssr
+ .tmp
+*.tsbuildinfo
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Environment
-.env
 *.local
 
-# Logs
-*.log
-logs/
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# Database
-*.db
-*.sqlite
+# wrangler files
+.wrangler
+.dev.vars*
+.prod.vars
+.env
+.env.*
 
-# Cache
-.cache/
-.pytest_cache/
-.ruff_cache/
+runner/downloads
+/generated/prisma
 
-# Application specific
-memory/
-test_reports/
-backups/
-*.png
-*.jpg
-*.jpeg
+/generated/prisma
+test.ts
+temp/
 
-# Docker
-volumes/-e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
+templates
+debugging.ipynb
+
+#bun.lock
+#*.lock
+
+debug-tools/*.json
+# Sentry Config File
+.env.sentry-build-plugin
+data-dump
+debug-tools/extracted
+debug-tools/presentation-tester
+
+.test-data
+cli

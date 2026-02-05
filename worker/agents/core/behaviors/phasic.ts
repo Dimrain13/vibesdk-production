@@ -5,7 +5,7 @@ import {
     PhaseImplementationSchemaType,
 } from '../../schemas';
 import { StaticAnalysisResponse } from '../../../services/sandbox/sandboxTypes';
-import { CurrentDevState, MAX_PHASES, PhasicState, FileState } from '../state';
+import { CurrentDevState, MAX_PHASES, PhasicState } from '../state';
 import { AllIssues, AgentInitArgs, PhaseExecutionResult, UserContext } from '../types';
 import { WebSocketMessageResponses } from '../../constants';
 import { UserConversationProcessor } from '../../operations/UserConversationProcessor';
@@ -28,7 +28,6 @@ import { ICodingAgent } from '../../services/interfaces/ICodingAgent';
 import { SimpleCodeGenerationOperation } from '../../operations/SimpleCodeGeneration';
 import { StateMigration } from '../stateMigration';
 import { runPreDeploySafetyGate } from '../../utils/preDeploySafetyGate';
-import { runConversationalGateway } from '../../operations/ConversationalGateway';
 
 interface PhasicOperations extends BaseCodingOperations {
     generateNextPhase: PhaseGenerationOperation;
@@ -47,9 +46,6 @@ interface PhasicOperations extends BaseCodingOperations {
 export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implements ICodingAgent {
     protected static readonly PROJECT_NAME_PREFIX_MAX_LENGTH = 20;
     
-    // Store pending init args when awaiting user clarification
-    protected pendingInitArgs: AgentInitArgs<PhasicState> | null = null;
-    
     protected operations: PhasicOperations = {
         regenerateFile: new FileRegenerationOperation(),
         fastCodeFixer: new FastCodeFixerOperation(),
@@ -62,11 +58,6 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
     /**
      * Initialize the code generator with project blueprint and template
      * Sets up services and begins deployment process
-     * 
-     * Flow:
-     * 1. Run conversational gateway to check if clarification needed
-     * 2. If clarification needed → stream question, set awaitingClarification flag, return early
-     * 3. If ready to build → proceed with blueprint generation
      */
     async initialize(
         initArgs: AgentInitArgs<PhasicState>,
@@ -77,175 +68,45 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
         if (!templateInfo || !templateInfo.templateDetails) {
             throw new Error('Phasic initialization requires templateInfo.templateDetails');
         }
-        let { query, language: _language, frameworks, hostname, inferenceContext, sandboxSessionId } = initArgs;
+        const { query, language, frameworks, hostname, inferenceContext, sandboxSessionId } = initArgs;
         
-        // ============================================
-        // STEP 1: Run Conversational Gateway
-        // ============================================
-        this.logger.info('Running conversational gateway', { query: query.slice(0, 100) });
+        // Generate a blueprint
+        this.logger.info('Generating blueprint', { query, queryLength: query.length, imagesCount: initArgs.images?.length || 0 });
+        this.logger.info(`Using language: ${language}, frameworks: ${frameworks ? frameworks.join(", ") : "none"}`);
         
-        const gatewayResult = await runConversationalGateway(
-            {
-                query,
-                projectType: this.projectType,
-                onStreamChunk: (chunk: string) => {
-                    initArgs.onBlueprintChunk(chunk);
-                },
-            },
-            this.env,
+        const blueprint = await generateBlueprint({
+            env: this.env,
             inferenceContext,
-            this.logger
-        );
-        
-        if (gatewayResult.status === 'conversational_answer') {
-            // Just answer the question - no building needed
-            this.logger.info('Gateway decided to answer conversationally, not building');
-            
-            // Stream the answer to the user
-            initArgs.onBlueprintChunk('\n\n' + gatewayResult.conversationalAnswer + '\n\n');
-            
-            // Set up minimal state without building
-            const packageJson = templateInfo.templateDetails.allFiles['package.json'];
-            const projectName = generateProjectName(
-                'project',
-                generateNanoId(),
-                PhasicCodingBehavior.PROJECT_NAME_PREFIX_MAX_LENGTH
-            );
-            
-            const answeredState: PhasicState = {
-                ...this.state,
-                projectName,
-                query,
-                blueprint: {} as any, // Empty - no building needed
-                templateName: templateInfo.templateDetails.name,
-                sandboxInstanceId: undefined,
-                generatedPhases: [],
-                commandsHistory: [],
-                lastPackageJson: packageJson,
-                sessionId: sandboxSessionId!,
-                hostname,
-                metadata: inferenceContext.metadata,
-                projectType: this.projectType,
-                behaviorType: 'phasic',
-                awaitingClarification: false,
-                mvpGenerated: true, // ✅ Set to true so subsequent messages don't trigger builds
-            };
-            this.setState(answeredState);
-            
-            // IMPORTANT: Customize and save template files to git
-            // This ensures that if the user requests a build later, the project is properly set up
-            const customizedFiles = customizeTemplateFiles(
-                templateInfo.templateDetails.allFiles,
-                {
-                    projectName,
-                    commandsHistory: []
+            query,
+            language: language!,
+            frameworks: frameworks!,
+            templateDetails: templateInfo?.templateDetails,
+            templateMetaInfo: templateInfo?.selection,
+            images: initArgs.images,
+            projectType: this.projectType,
+            stream: {
+                chunk_size: 256,
+                onChunk: (chunk) => {
+                    initArgs.onBlueprintChunk(chunk);
                 }
-            );
-            
-            const filesToSave = Object.entries(customizedFiles).map(([filePath, content]) => ({
-                filePath,
-                fileContents: content,
-                filePurpose: 'Project configuration file'
-            }));
-            
-            await this.fileManager.saveGeneratedFiles(
-                filesToSave,
-                'Initialize project configuration files',
-                true
-            );
-            
-            this.logger.info('Agent answered question conversationally, template files initialized for future builds');
-            return this.state;
-        }
-        
-        if (gatewayResult.status === 'needs_clarification') {
-            // Stream the clarification question to the user
-            this.logger.info('Gateway requires clarification, streaming question');
-            
-            // Stream the question
-            initArgs.onBlueprintChunk('\n\n' + gatewayResult.clarificationQuestion + '\n\n');
-            
-            // Set up minimal state - user will respond via WebSocket
-            const packageJson = templateInfo.templateDetails.allFiles['package.json'];
-            const projectName = generateProjectName(
-                'project',
-                generateNanoId(),
-                PhasicCodingBehavior.PROJECT_NAME_PREFIX_MAX_LENGTH
-            );
-            
-            const awaitingState: PhasicState = {
-                ...this.state,
-                projectName,
-                query,
-                blueprint: {} as any, // Empty - will be generated after user responds
-                templateName: templateInfo.templateDetails.name,
-                sandboxInstanceId: undefined,
-                generatedPhases: [],
-                commandsHistory: [],
-                lastPackageJson: packageJson,
-                sessionId: sandboxSessionId!,
-                hostname,
-                metadata: inferenceContext.metadata,
-                projectType: this.projectType,
-                behaviorType: 'phasic',
-                awaitingClarification: true, // Flag to indicate we're waiting for user response
-            };
-            this.setState(awaitingState);
-            
-            // Store the init args for later use when user responds
-            this.pendingInitArgs = initArgs;
-            
-            this.logger.info('Agent awaiting user clarification');
-            return this.state;
-        }
-        
-        // Gateway approved - use enhanced query if provided
-        if (gatewayResult.enhancedQuery) {
-            query = gatewayResult.enhancedQuery;
-            this.logger.info('Using enhanced query from gateway', { enhancedQuery: query.slice(0, 100) });
-        }
-        
-        // ============================================
-        // STEP 2: DIRECT GENERATION (Simple Mode - No Blueprint)
-        // ============================================
-        // Skip blueprint and phases - go straight to building!
-        // This is 62% more token efficient and matches emergent.sh style
-        this.logger.info('Using SIMPLE mode - direct generation without blueprint', { 
-            query: query.slice(0, 100),
-            queryLength: query.length, 
-            imagesCount: initArgs.images?.length || 0 
-        });
-        
-        // Prepare template context for direct generation
+            }
+        })
+                
         const packageJson = templateInfo.templateDetails.allFiles['package.json'];
+                
         const projectName = generateProjectName(
-            'app',
+            blueprint?.projectName || templateInfo?.templateDetails.name || '',
             generateNanoId(),
             PhasicCodingBehavior.PROJECT_NAME_PREFIX_MAX_LENGTH
         );
-        
+                        
         this.logger.info('Generated project name', { projectName });
-        
-        // Initialize state FIRST (needed for getOperationOptions to work)
+                        
         const nextState: PhasicState = {
             ...this.state,
             projectName,
             query,
-            blueprint: {
-                projectName: projectName,
-                description: query,
-                features: [query], // Simple: just use the query as a single feature
-                techStack: {
-                    frontend: frameworks || [],
-                    backend: [],
-                    database: [],
-                    other: []
-                },
-                dependencies: [],
-                devDependencies: [],
-                projectStructure: {},
-                phases: [] // No phases in simple mode
-            } as any,
+            blueprint,
             templateName: templateInfo.templateDetails.name,
             sandboxInstanceId: undefined,
             generatedPhases: [],
@@ -255,73 +116,9 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
             hostname,
             metadata: inferenceContext.metadata,
             projectType: this.projectType,
-            behaviorType: 'phasic',
+            behaviorType: 'phasic'
         };
-        
         this.setState(nextState);
-        
-        // Broadcast that we're starting generation (no real blueprint, but satisfy interface)
-        this.broadcast(WebSocketMessageResponses.BLUEPRINT_UPDATED, {
-            blueprint: nextState.blueprint,
-        });
-        
-        // NOW we can call getOperationOptions() since state is set up
-        this.logger.info('Starting direct file generation');
-        const operationOptions = this.getOperationOptions();
-        
-        // Generate files directly using SimpleCodeGeneration
-        const generationResult = await this.operations.simpleGenerateFiles.execute({
-            phaseName: 'Complete Application',
-            phaseDescription: query,
-            requirements: [query],
-            files: [], // SimpleCodeGeneration will determine what files to create
-            fileGeneratingCallback: (filePath: string, filePurpose: string) => {
-                this.broadcast(WebSocketMessageResponses.FILE_GENERATING, {
-                    filepath: filePath,
-                    filePurpose: filePurpose,
-                });
-            },
-            fileChunkGeneratedCallback: (filePath: string, chunk: string, format: 'full_content' | 'unified_diff') => {
-                this.broadcast(WebSocketMessageResponses.FILE_GENERATED, {
-                    filepath: filePath,
-                    fileContent: chunk,
-                    contentType: format,
-                });
-            },
-            fileClosedCallback: (file, message) => {
-                this.broadcast(WebSocketMessageResponses.FILE_CLOSED, {
-                    filepath: file.filePath,
-                    message: message,
-                });
-            },
-        }, operationOptions);
-        
-        // Store generated files in state (using generatedFilesMap)
-        const fileStateMap: Record<string, FileState> = {};
-        for (const file of generationResult.files) {
-            fileStateMap[file.filePath] = {
-                ...file, // filePath, fileContents, filePurpose
-                lastDiff: '', // Initialize lastDiff for FileState
-            };
-        }
-        
-        this.setState({
-            ...this.state,
-            generatedFilesMap: fileStateMap,
-        });
-        
-        this.logger.info('Direct generation complete', { 
-            filesGenerated: generationResult.files.length 
-        });
-        
-        // Save generated files to git BEFORE deploying
-        this.logger.info('Saving generated files to git');
-        await this.fileManager.saveGeneratedFiles(
-            generationResult.files,
-            'Generate application files',
-            true // commit
-        );
-        
         // Customize template files (package.json, wrangler.jsonc, .bootstrap.js, .gitignore)
         const customizedFiles = customizeTemplateFiles(
             templateInfo.templateDetails.allFiles,
@@ -348,33 +145,12 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
             true
         );
         
-        this.logger.info('Committed all files to git, starting deployment');
-        
-        // NOW deploy to sandbox (files are in git, deployment will use them)
-        // Don't pass files - deployToSandbox will get them from git
-        await this.deployToSandbox([], true, 'Initial deployment');
-        
-        // Generate README and setup commands like original flow
-        try {
-            const setupCommands = await this.getProjectSetupAssistant().generateSetupCommands();
-            await this.generateReadme();
-            this.logger.info('Generated README and setup commands');
-            
-            // Execute setup commands (install dependencies, etc.)
-            await this.executeCommands(setupCommands.commands);
-            this.logger.info('Setup commands executed successfully');
-        } catch (error) {
-            this.logger.error('Error during README/setup generation:', error);
-            // Continue even if this fails
-        }
-        
-        // SIMPLE MODE: No phases, no state machine - files are already generated and deployed!
-        // The app is now ready for user interaction
-        
-        // Mark MVP as generated so generateAllFiles() won't run after user messages
-        this.setMVPGenerated();
-        
-        this.logger.info(`Agent ${this.getAgentId()} session: ${this.state.sessionId} initialized successfully - SIMPLE MODE (direct generation complete)`);
+        this.logger.info('Committed customized template files to git');
+
+        this.initializeAsync().catch((error: unknown) => {
+            this.broadcastError("Initialization failed", error);
+        });
+        this.logger.info(`Agent ${this.getAgentId()} session: ${this.state.sessionId} initialized successfully`);
         return this.state;
     }
 
@@ -474,19 +250,69 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
     }
 
     async build(): Promise<void> {
-        // SIMPLE MODE: This shouldn't be called after initial generation
-        // because mvpGenerated is set to true, which makes generateAllFiles() return early.
-        // 
-        // If this IS called, it means something unexpected happened.
-        // Just log and return - user messages are handled by handleUserInput() → UserConversationProcessor
-        this.logger.info("SIMPLE MODE: build() called unexpectedly - returning early");
-        return;
+        await this.launchStateMachine();
     }
 
+    private async launchStateMachine() {
+        this.logger.info("Launching state machine");
 
-    // SIMPLE MODE NOTE: The old phase-based state machine has been removed.
-    // User messages are now processed directly through UserConversationProcessor in the build() method above.
-    // This provides faster, more efficient responses without the overhead of phase planning.
+        let currentDevState = CurrentDevState.PHASE_IMPLEMENTING;
+        const generatedPhases = this.state.generatedPhases;
+        const incompletedPhases = generatedPhases.filter(phase => !phase.completed);
+        let phaseConcept : PhaseConceptType | undefined;
+        if (incompletedPhases.length > 0) {
+            phaseConcept = incompletedPhases[incompletedPhases.length - 1];
+            this.logger.info('Resuming code generation from incompleted phase', {
+                phase: phaseConcept
+            });
+        } else if (generatedPhases.length > 0) {
+            currentDevState = CurrentDevState.PHASE_GENERATING;
+            this.logger.info('Resuming code generation after generating all phases', {
+                phase: generatedPhases[generatedPhases.length - 1]
+            });
+        } else {
+            phaseConcept = this.state.blueprint.initialPhase;
+            this.logger.info('Starting code generation from initial phase', {
+                phase: phaseConcept
+            });
+            this.createNewIncompletePhase(phaseConcept);
+        }
+
+        let userContext: UserContext | undefined;
+
+        try {
+            let executionResults: PhaseExecutionResult;
+            // State machine loop - continues until IDLE state
+            while (currentDevState !== CurrentDevState.IDLE) {
+                this.logger.info(`[generateAllFiles] Executing state: ${currentDevState}`);
+                switch (currentDevState) {
+                    case CurrentDevState.PHASE_GENERATING:
+                        executionResults = await this.executePhaseGeneration();
+                        currentDevState = executionResults.currentDevState;
+                        phaseConcept = executionResults.result;
+                        userContext = executionResults.userContext;
+                        break;
+                    case CurrentDevState.PHASE_IMPLEMENTING:
+                        executionResults = await this.executePhaseImplementation(phaseConcept, userContext);
+                        currentDevState = executionResults.currentDevState;
+                        userContext = undefined;
+                        break;
+                    case CurrentDevState.REVIEWING:
+                        currentDevState = await this.executeReviewCycle();
+                        break;
+                    case CurrentDevState.FINALIZING:
+                        currentDevState = await this.executeFinalizing();
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            this.logger.info("State machine completed successfully");
+        } catch (error) {
+            this.logger.error("Error in state machine:", error);
+        }
+    }
 
     /**
      * Execute phase generation state - generate next phase with user suggestions
@@ -896,212 +722,7 @@ export class PhasicCodingBehavior extends BaseCodingBehavior<PhasicState> implem
     }
 
     async handleUserInput(userMessage: string, images?: ImageAttachment[]): Promise<void> {
-        // Check if we're awaiting clarification from the gateway
-        if (this.state.awaitingClarification && this.pendingInitArgs) {
-            this.logger.info('Received clarification response from user', {
-                originalQuery: this.state.query,
-                userResponse: userMessage.slice(0, 100),
-            });
-
-            // Combine original query with user's clarification
-            const enhancedQuery = `${this.state.query}\n\nUser clarification: ${userMessage}`;
-            
-            // Clear the awaiting flag
-            this.setState({
-                ...this.state,
-                awaitingClarification: false,
-            });
-
-            // Now generate the blueprint with the enhanced query
-            const initArgs = this.pendingInitArgs;
-            this.pendingInitArgs = null;
-
-            // Stream a message to let user know we're proceeding
-            this.broadcast(WebSocketMessageResponses.CONVERSATION_RESPONSE, {
-                message: 'Got it! Let me build that for you...\n\n',
-                conversationId: IdGenerator.generateConversationId(),
-                isStreaming: false,
-            });
-
-            // Generate blueprint with enhanced query
-            await this.generateBlueprintAfterClarification(initArgs, enhancedQuery, images);
-            return;
-        }
-
-        // Normal flow - pass to conversation processor
         const result = await super.handleUserInput(userMessage, images);
         return result;
-    }
-
-    /**
-     * Generate blueprint after receiving user clarification
-     */
-    private async generateBlueprintAfterClarification(
-        initArgs: AgentInitArgs<PhasicState>,
-        enhancedQuery: string,
-        _images?: ImageAttachment[]
-    ): Promise<void> {
-        const { templateInfo, inferenceContext, hostname, sandboxSessionId } = initArgs;
-        
-        if (!templateInfo || !templateInfo.templateDetails) {
-            this.logger.error('Missing template info for blueprint generation');
-            return;
-        }
-
-        this.logger.info('Generating blueprint after clarification', { 
-            enhancedQuery: enhancedQuery.slice(0, 100) 
-        });
-
-        try {
-            const blueprint = await generateBlueprint({
-                env: this.env,
-                inferenceContext,
-                query: enhancedQuery,
-                language: initArgs.language!,
-                frameworks: initArgs.frameworks!,
-                templateDetails: templateInfo.templateDetails,
-                templateMetaInfo: templateInfo.selection,
-                images: initArgs.images,
-                projectType: this.projectType,
-                stream: {
-                    chunk_size: 256,
-                    onChunk: (chunk) => {
-                        // Broadcast blueprint chunks via WebSocket
-                        this.broadcast(WebSocketMessageResponses.BLUEPRINT_CHUNK, { chunk });
-                    }
-                }
-            });
-
-            const packageJson = templateInfo.templateDetails.allFiles['package.json'];
-            const projectName = generateProjectName(
-                blueprint?.projectName || templateInfo.templateDetails.name || '',
-                generateNanoId(),
-                PhasicCodingBehavior.PROJECT_NAME_PREFIX_MAX_LENGTH
-            );
-
-            this.logger.info('Generated project name after clarification', { projectName });
-
-            // Update state with blueprint
-            this.setState({
-                ...this.state,
-                projectName,
-                query: enhancedQuery,
-                blueprint,
-                templateName: templateInfo.templateDetails.name,
-                sandboxInstanceId: undefined,
-                generatedPhases: [],
-                commandsHistory: [],
-                lastPackageJson: packageJson,
-                sessionId: sandboxSessionId!,
-                hostname,
-                metadata: inferenceContext.metadata,
-                projectType: this.projectType,
-                behaviorType: 'phasic',
-                awaitingClarification: false,
-            });
-
-            // Customize template files
-            const customizedFiles = customizeTemplateFiles(
-                templateInfo.templateDetails.allFiles,
-                {
-                    projectName,
-                    commandsHistory: []
-                }
-            );
-
-            this.logger.info('Customized template files', { 
-                files: Object.keys(customizedFiles) 
-            });
-
-            // Save customized files to git
-            const filesToSave = Object.entries(customizedFiles).map(([filePath, content]) => ({
-                filePath,
-                fileContents: content,
-                filePurpose: 'Project configuration file'
-            }));
-
-            await this.fileManager.saveGeneratedFiles(
-                filesToSave,
-                'Initialize project configuration files',
-                true
-            );
-
-            this.logger.info('Committed customized template files to git');
-
-            // SIMPLE MODE: Generate files directly here instead of using initializeAsync + state machine
-            this.logger.info('Starting direct file generation after clarification');
-            
-            // Generate files using SimpleCodeGeneration
-            const operationOptions = this.getOperationOptions();
-            const generationResult = await this.operations.simpleGenerateFiles.execute({
-                phaseName: 'Complete Application',
-                phaseDescription: enhancedQuery,
-                requirements: [enhancedQuery],
-                files: [],
-                fileGeneratingCallback: (filePath: string, filePurpose: string) => {
-                    this.broadcast(WebSocketMessageResponses.FILE_GENERATING, {
-                        filepath: filePath,
-                        filePurpose: filePurpose,
-                    });
-                },
-                fileChunkGeneratedCallback: (filePath: string, chunk: string, format: 'full_content' | 'unified_diff') => {
-                    this.broadcast(WebSocketMessageResponses.FILE_GENERATED, {
-                        filepath: filePath,
-                        fileContent: chunk,
-                        contentType: format,
-                    });
-                },
-                fileClosedCallback: (file, message) => {
-                    this.broadcast(WebSocketMessageResponses.FILE_CLOSED, {
-                        filepath: file.filePath,
-                        message: message,
-                    });
-                },
-            }, operationOptions);
-
-            // Store generated files in state
-            const fileStateMap: Record<string, FileState> = {};
-            for (const file of generationResult.files) {
-                fileStateMap[file.filePath] = {
-                    ...file,
-                    lastDiff: '',
-                };
-            }
-            this.setState({
-                ...this.state,
-                generatedFilesMap: fileStateMap,
-            });
-
-            this.logger.info('Direct generation complete after clarification');
-
-            // Save generated files to git
-            await this.fileManager.saveGeneratedFiles(
-                generationResult.files,
-                'Generate application files after clarification',
-                true
-            );
-
-            // Deploy to sandbox
-            await this.deployToSandbox([], true, 'Initial deployment after clarification');
-
-            // Generate README and setup
-            try {
-                const setupCommands = await this.getProjectSetupAssistant().generateSetupCommands();
-                await this.generateReadme();
-                await this.executeCommands(setupCommands.commands);
-                this.logger.info('Setup complete after clarification');
-            } catch (error) {
-                this.logger.error('Error during setup after clarification:', error);
-            }
-
-            // Mark MVP as generated
-            this.setMVPGenerated();
-
-            this.logger.info(`Blueprint generated and app built successfully after clarification`);
-
-        } catch (error) {
-            this.logger.error('Error generating blueprint after clarification', error);
-            this.broadcastError('Failed to generate blueprint', error);
-        }
     }
 }

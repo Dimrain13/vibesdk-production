@@ -77,7 +77,7 @@ These files are redacted. They exist but their contents are hidden for security 
 ${(template.redactedFiles ?? []).join('\n')}
 </REDACTED FILES>
 
-**Websockets are supported in Cloudflare Workers via Durable Objects. Dynamic imports should be avoided when possible but can be used if necessary.**
+**Websockets and dynamic imports are not supported, so please avoid using them.**
 
 </TEMPLATE DETAILS>`;
         } else {
@@ -819,7 +819,7 @@ export const STRATEGIES = {
 
     **No need to add accessibility features. Focus on delivering an actually working, feature-wise polished and complete application in as few phases as possible.**
     **Always stick to existing project/template patterns. Respect and work with existing worker bindings rather than making custom ones**
-    **Rely on open source tools and free tier services by default. When users provide API keys or credentials for third-party services, implement those integrations properly. Store credentials securely in environment variables. Refer to template usage instructions to know if specific cloudflare services are also available for use.**
+    **Rely on open source tools and free tier services only apart from whats configured in the environment. Refer to template usage instructions to know if specific cloudflare services are also available for use.**
     **Make sure to implement all the features and functionality requested by the user. Stick to the blueprint's implementation roadmap and end at the conclusion of the final phase. There should be no compromises**
     **This is a Cloudflare Workers & Durable Objects project. The environment is preconfigured. Absolutely DO NOT Propose changes to wrangler.toml or any other config files. These config files are hidden from you but they do exist.**
     **The Homepage of the frontend is a dummy page. It should be rewritten as the primary page of the application in the initial phase.**

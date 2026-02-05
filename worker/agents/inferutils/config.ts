@@ -1,12 +1,10 @@
 import { 
     AgentActionKey, 
     AgentConfig, 
-    AgentConstraintConfig, 
+    AgentConstraintConfig,
     AIModels,
     AllModels,
-    LiteModels,
-    RegularModels,
-} from "./config.types";
+} from './config.types';
 import { env } from 'cloudflare:workers';
 
 // Common configs - these are good defaults
@@ -114,30 +112,6 @@ const PLATFORM_AGENT_CONFIG: AgentConfig = {
         temperature: 1,
         fallbackModel: AIModels.GEMINI_2_5_PRO,
     },
-    // Specialized agent for API/database integrations - uses more capable model
-    integrationImplementation: {
-        name: AIModels.CLAUDE_3_5_SONNET,
-        reasoning_effort: 'high',
-        max_tokens: 32000,
-        temperature: 0.3,
-        fallbackModel: AIModels.GEMINI_2_5_PRO,
-    },
-    // Image generation from prompts
-    imageGeneration: {
-        name: AIModels.GPT_4O,
-        reasoning_effort: 'low',
-        max_tokens: 4000,
-        temperature: 0.8,
-        fallbackModel: AIModels.GEMINI_2_5_FLASH,
-    },
-    // File and document analysis  
-    fileAnalysis: {
-        name: AIModels.GPT_4O,
-        reasoning_effort: 'medium',
-        max_tokens: 8000,
-        temperature: 0.3,
-        fallbackModel: AIModels.GEMINI_2_5_PRO,
-    },
 };
 
 //======================================================================================
@@ -203,30 +177,6 @@ const DEFAULT_AGENT_CONFIG: AgentConfig = {
         temperature: 1,
         fallbackModel: AIModels.GEMINI_2_5_FLASH,
     },
-    // Specialized agent for API/database integrations
-    integrationImplementation: {
-        name: AIModels.GEMINI_2_5_PRO,
-        reasoning_effort: 'high',
-        max_tokens: 32000,
-        temperature: 0.3,
-        fallbackModel: AIModels.GEMINI_2_5_FLASH,
-    },
-    // Image generation from prompts
-    imageGeneration: {
-        name: AIModels.GEMINI_2_5_FLASH,
-        reasoning_effort: 'low',
-        max_tokens: 4000,
-        temperature: 0.8,
-        fallbackModel: AIModels.GEMINI_2_5_FLASH_LITE,
-    },
-    // File and document analysis
-    fileAnalysis: {
-        name: AIModels.GEMINI_2_5_PRO,
-        reasoning_effort: 'medium',
-        max_tokens: 8000,
-        temperature: 0.3,
-        fallbackModel: AIModels.GEMINI_2_5_FLASH,
-    },
 };
 
 export const AGENT_CONFIG: AgentConfig = env.PLATFORM_MODEL_PROVIDERS 
@@ -236,11 +186,11 @@ export const AGENT_CONFIG: AgentConfig = env.PLATFORM_MODEL_PROVIDERS
 
 export const AGENT_CONSTRAINTS: Map<AgentActionKey, AgentConstraintConfig> = new Map([
 	['fastCodeFixer', {
-		allowedModels: new Set([AIModels.DISABLED]),
+		allowedModels: new Set(AllModels),
 		enabled: true,
 	}],
 	['realtimeCodeFixer', {
-		allowedModels: new Set([AIModels.DISABLED]),
+		allowedModels: new Set(AllModels),
 		enabled: true,
 	}],
 	['fileRegeneration', {
@@ -252,15 +202,15 @@ export const AGENT_CONSTRAINTS: Map<AgentActionKey, AgentConstraintConfig> = new
 		enabled: true,
 	}],
 	['projectSetup', {
-		allowedModels: new Set([...RegularModels, AIModels.GEMINI_2_5_PRO]),
+		allowedModels: new Set(AllModels),
 		enabled: true,
 	}],
 	['conversationalResponse', {
-		allowedModels: new Set(RegularModels),
+		allowedModels: new Set(AllModels),
 		enabled: true,
 	}],
 	['templateSelection', {
-		allowedModels: new Set(LiteModels),
+		allowedModels: new Set(AllModels),
 		enabled: true,
 	}],
 ]);

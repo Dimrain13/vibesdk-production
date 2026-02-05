@@ -149,12 +149,6 @@ export class AgenticCodingBehavior extends BaseCodingBehavior<AgenticState> impl
         }
 
         await this.queueUserRequest(userMessage, processedImages);
-        
-        // If we were waiting for user input (after ask_human), reset the flag
-        if (this.isWaitingForUserInput()) {
-            this.setWaitingForUserInput(false);
-            this.logger.info('User responded - resuming build loop');
-        }
 
         if (this.isCodeGenerating()) {
             // Code generating - render tool call for UI
@@ -251,11 +245,6 @@ export class AgenticCodingBehavior extends BaseCodingBehavior<AgenticState> impl
     async build(): Promise<void> {
         let attempt = 0;
         while (!this.isMVPGenerated() || this.state.pendingUserInputs.length > 0) {
-            // If we're waiting for user input (ask_human was called), exit the loop
-            if (this.isWaitingForUserInput()) {
-                this.logger.info('Exiting build loop - waiting for user response to ask_human');
-                break;
-            }
             await this.executeGeneration(attempt);
             attempt++;
         }

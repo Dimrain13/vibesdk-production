@@ -122,8 +122,7 @@ export const DEFAULT_FEATURE_DEFINITIONS: Record<ProjectType, Omit<FeatureDefini
 			hasCustomHeaderActions: true,
 			hasCustomSidebar: false,
 			hasCustomFileFilter: false,
-			// Changed from 'phasic' to 'agentic' for E1-style interactive behavior
-			behaviorType: 'agentic',
+			behaviorType: 'phasic',
 		},
 	},
 	presentation: {

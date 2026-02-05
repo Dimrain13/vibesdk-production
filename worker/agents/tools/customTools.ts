@@ -19,22 +19,6 @@ import { createGetRuntimeErrorsTool } from './toolkit/get-runtime-errors';
 import { createWaitForGenerationTool } from './toolkit/wait-for-generation';
 import { createWaitForDebugTool } from './toolkit/wait-for-debug';
 import { createGitTool } from './toolkit/git';
-// E1-style tools
-import { createTestingAgentTool } from './toolkit/testing-agent';
-import { createIntegrationPlaybookTool } from './toolkit/integration-playbook';
-import { createDesignAgentTool } from './toolkit/design-agent';
-import { createTroubleshootAgentTool } from './toolkit/troubleshoot-agent';
-import { createSupportAgentTool } from './toolkit/support-agent';
-import { createCrawlTool } from './toolkit/crawl-tool';
-import { createAskHumanTool } from './toolkit/ask-human';
-import { createFinishTool } from './toolkit/finish-tool';
-import { createIntegrationAgentTool } from './toolkit/integration-agent';
-// Media & File tools
-import { createScreenshotTool } from './toolkit/screenshot-tool';
-import { createImageGenerationTool } from './toolkit/image-generation-tool';
-import { createImageSelectorTool } from './toolkit/image-selector-tool';
-import { createFileAnalysisTool } from './toolkit/file-analysis-tool';
-import { createFileExtractionTool } from './toolkit/file-extraction-tool';
 import { ICodingAgent } from '../services/interfaces/ICodingAgent';
 import { Message } from '../inferutils/common';
 import { ChatCompletionMessageFunctionToolCall } from 'openai/resources';
@@ -75,23 +59,6 @@ export function buildTools(
         createGitTool(agent, logger, { excludeCommands: ['reset'] }),
         // Deep autonomous debugging assistant tool
         createDeepDebuggerTool(agent, logger, toolRenderer, streamCb),
-        // E1-style tools
-        createTestingAgentTool(agent, logger, toolRenderer, streamCb),
-        createIntegrationPlaybookTool(agent, logger, toolRenderer, streamCb),
-        createDesignAgentTool(agent, logger, toolRenderer, streamCb),
-        createTroubleshootAgentTool(agent, logger, toolRenderer, streamCb),
-        createSupportAgentTool(logger, toolRenderer, streamCb),
-        createCrawlTool(logger, toolRenderer, streamCb),
-        createAskHumanTool(logger, toolRenderer, streamCb),
-        createFinishTool(logger, toolRenderer, streamCb),
-        // Specialized integration agent (uses more capable model)
-        createIntegrationAgentTool(agent, logger, toolRenderer, streamCb),
-        // Media & File tools
-        createScreenshotTool(logger, toolRenderer, streamCb),
-        createImageGenerationTool(logger, toolRenderer, streamCb),
-        createImageSelectorTool(logger, toolRenderer, streamCb),
-        createFileAnalysisTool(logger, toolRenderer, streamCb),
-        createFileExtractionTool(logger, toolRenderer, streamCb),
     ];
 }
 

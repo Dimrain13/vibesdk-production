@@ -452,12 +452,6 @@ type VaultRequiredMessage = {
 	secretId?: string;
 };
 
-/** Ping/Pong for keep-alive */
-type PongMessage = {
-        type: 'pong';
-        timestamp: number;
-};
-
 // ========== VAULT WEBSOCKET MESSAGES (sent to vault DO) ==========
 
 /** Client request to store a new secret */
@@ -625,8 +619,7 @@ export type WebSocketMessage =
 	| ServerLogMessage
 	| VaultUnlockedMessage
 	| VaultLockedMessage
-	| VaultRequiredMessage
-	| PongMessage;
+	| VaultRequiredMessage;
 
 // A type representing all possible message type strings (e.g., 'generation_started', 'file_generating', etc.)
 export type WebSocketMessageType = WebSocketMessage['type'];

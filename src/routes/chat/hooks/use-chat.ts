@@ -321,68 +321,6 @@ export function useChat({
 					retryTimeouts.current.forEach(clearTimeout);
 					retryTimeouts.current = [];
 
-					// Inactivity timeout configuration (15 minutes of no user activity)
-					const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
-					let lastActivityTime = Date.now();
-					let inactivityCheckInterval: ReturnType<typeof setInterval> | null = null;
-
-					// Update activity timestamp on user actions
-					const updateActivity = () => {
-						lastActivityTime = Date.now();
-					};
-
-					// Listen for user activity events
-					const activityEvents = ['mousedown', 'keydown', 'touchstart', 'scroll'];
-					activityEvents.forEach(event => {
-						document.addEventListener(event, updateActivity, { passive: true });
-					});
-
-					// Handle tab visibility changes - reset timer when tab becomes visible
-					const handleVisibilityChange = () => {
-						if (document.visibilityState === 'visible') {
-							updateActivity();
-							logger.debug('📱 Tab visible - activity timer reset');
-						}
-					};
-					document.addEventListener('visibilitychange', handleVisibilityChange);
-
-					// Start ping interval to keep connection alive (every 30 seconds)
-					// But only if there's been recent user activity
-					const pingInterval = setInterval(() => {
-						if (ws.readyState !== WebSocket.OPEN) {
-							clearInterval(pingInterval);
-							return;
-						}
-						
-						const timeSinceActivity = Date.now() - lastActivityTime;
-						
-						// If inactive for too long, close the connection
-						if (timeSinceActivity > INACTIVITY_TIMEOUT_MS) {
-							logger.info('🔌 Closing WebSocket due to inactivity');
-							clearInterval(pingInterval);
-							if (inactivityCheckInterval) clearInterval(inactivityCheckInterval);
-							// Remove activity listeners
-							activityEvents.forEach(event => {
-								document.removeEventListener(event, updateActivity);
-							});
-							ws.close(1000, 'Inactivity timeout');
-							return;
-						}
-						
-						// Send ping to keep connection alive
-						sendWebSocketMessage(ws, 'ping');
-					}, 30000);
-					
-					// Clear ping interval and activity listeners on close
-					ws.addEventListener('close', () => {
-						clearInterval(pingInterval);
-						if (inactivityCheckInterval) clearInterval(inactivityCheckInterval);
-						activityEvents.forEach(event => {
-							document.removeEventListener(event, updateActivity);
-						});
-						document.removeEventListener('visibilitychange', handleVisibilityChange);
-					}, { once: true });
-
 					// Send success message to user
 					if (isRetry) {
 						// Clear old messages on reconnect to prevent duplicates
@@ -548,14 +486,19 @@ export function useChat({
 					};
 
 					let startedBlueprintStream = false;
-					// No automatic messages - the agent will respond based on what the user asked
+					const initialBehaviorType = getBehaviorTypeForProject(projectType);
+					if (initialBehaviorType === 'phasic') {
+						sendMessage(
+							createAIMessage('main', "Sure, let's get started. Bootstrapping the project first...", true),
+						);
+					}
 
 					for await (const obj of ndjsonStream(response.stream)) {
                         logger.debug('Received chunk from server:', obj);
 						if (obj.chunk) {
 							if (!startedBlueprintStream) {
-								// Silent initialization - no "Blueprint is being generated" message
-								logger.info('Bootstrap stream started');
+								sendMessage(createAIMessage('main', 'Blueprint is being generated...', true));
+								logger.info('Blueprint stream has started');
 								setIsBootstrapping(false);
 								setIsGeneratingBlueprint(true);
 								startedBlueprintStream = true;
@@ -595,10 +538,14 @@ export function useChat({
 						}
 					}
 
-					// Don't show "Blueprint generation complete" message
-					// The agent now reacts to what the user asks instead of auto-generating blueprints
 					updateStage('blueprint', { status: 'completed' });
 					setIsGeneratingBlueprint(false);
+					const finalBehaviorType = getBehaviorTypeForProject(projectType);
+					if (finalBehaviorType === 'phasic') {
+						sendMessage(
+							createAIMessage('main', 'Blueprint generation complete. Now starting the code generation...', true),
+						);
+					}
 
 					if (!result.websocketUrl || !result.agentId) {
 						throw new Error('Failed to initialize agent session');

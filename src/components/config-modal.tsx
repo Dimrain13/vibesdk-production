@@ -74,10 +74,7 @@ const getModelRecommendation = (agentAction: string) => {
     conversationalResponse: 'Recommended: Balanced models for natural conversation',
     codeReview: 'Recommended: Analytical models with large context',
     fileRegeneration: 'Recommended: Pure coding models',
-    screenshotAnalysis: 'Recommended: Vision-capable models for image analysis',
-    integrationImplementation: 'Recommended: High-capability models for API/database integrations',
-    imageGeneration: 'Recommended: Creative models with image generation support',
-    fileAnalysis: 'Recommended: Vision-capable models for document analysis'
+    screenshotAnalysis: 'Recommended: Vision-capable models for image analysis'
   };
   return recommendations[agentAction] || '';
 };
