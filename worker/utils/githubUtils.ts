@@ -13,7 +13,7 @@ export function createGitHubHeaders(
         Authorization: `token ${accessToken}`,
         'Content-Type': 'application/json',
         Accept: 'application/vnd.github.v3+json',
-        'User-Agent': 'Cloudflare-OrangeBuild-OAuth-Integration/1.0',
+        'User-Agent': 'Cloudflare-OrbitBuild-OAuth-Integration/1.0',
     };
 }
 

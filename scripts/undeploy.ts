@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * Cloudflare Orange Build - Automated Undeployment Script
+ * Cloudflare Orbit Build - Automated Undeployment Script
  * 
  * This script safely removes all Cloudflare resources associated with 
- * the Orange Build platform, including:
+ * the Orbit Build platform, including:
  * - Worker
  * - Containers 
  * - KV namespaces
@@ -537,14 +537,14 @@ class CloudflareUndeploymentManager {
     console.log('\n💡 To completely remove all resources, use:');
     console.log('   bun scripts/undeploy.ts all --force');
     
-    console.log('\n🧡 Orange Build cleanup completed!');
+    console.log('\n🧡 Orbit Build cleanup completed!');
   }
 
   /**
    * Main undeployment orchestration method
    */
   public async undeploy(): Promise<void> {
-    console.log('🧡 Cloudflare Orange Build - Automated Undeployment Starting...\n');
+    console.log('🧡 Cloudflare Orbit Build - Automated Undeployment Starting...\n');
     
     const startTime = Date.now();
 

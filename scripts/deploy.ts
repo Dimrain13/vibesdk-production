@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * Cloudflare Orange Build - Automated Deployment Script
+ * Cloudflare Orbit Build - Automated Deployment Script
  *
  * This script handles the complete setup and deployment process for the
- * Cloudflare Orange Build platform, including:
+ * Cloudflare Orbit Build platform, including:
  * - Workers for Platforms dispatch namespace creation
  * - Templates repository deployment to R2
  * - Container configuration updates
@@ -1751,7 +1751,7 @@ class CloudflareDeploymentManager {
 		];
 
 		const prodVarsContent: string[] = [
-			'# Production environment variables for Cloudflare Orange Build',
+			'# Production environment variables for Cloudflare Orbit Build',
 			'# Generated automatically during deployment',
 			'',
 			'# Essential Secrets:',
@@ -1950,7 +1950,7 @@ class CloudflareDeploymentManager {
 	 */
 	public async deploy(): Promise<void> {
 		console.log(
-			'🧡 Cloudflare Orange Build - Automated Deployment Starting...\n',
+			'🧡 Cloudflare Orbit Build - Automated Deployment Starting...\n',
 		);
 
 		const startTime = Date.now();
@@ -2067,7 +2067,7 @@ class CloudflareDeploymentManager {
 					`\n🎉 Complete deployment finished successfully in ${duration}s!`,
 				);
 				console.log(
-					`✅ Your Cloudflare Orange Build platform is now live at https://${customDomain}! 🚀`,
+					`✅ Your Cloudflare Orbit Build platform is now live at https://${customDomain}! 🚀`,
 				);
 				
 				// Restore ARM64 flags for continued local development
