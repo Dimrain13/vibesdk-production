@@ -1,57 +1,31 @@
+# Wrangler
+.wrangler/
+wrangler.toml.backup
+
 # Logs
-logs
-*.log*
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+*.log
 
-node_modules
-dist
- dist-ssr
- .tmp
-*.tsbuildinfo
-
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# wrangler files
-.wrangler
-.dev.vars*
-.prod.vars
+# Environment
 .env
-.env.*
+.env.local
+.dev.vars
 
-runner/downloads
-/generated/prisma
+# Node
+node_modules/
+package-lock.json
 
-/generated/prisma
-test.ts
-temp/
+# OS
+.DS_Store
+Thumbs.db
 
-templates
-debugging.ipynb
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-#bun.lock
-#*.lock
-
-debug-tools/*.json
-# Sentry Config File
-.env.sentry-build-plugin
-data-dump
-debug-tools/extracted
-debug-tools/presentation-tester
-
-.test-data
-cli
+# Secrets (never commit these!)
+*.key
+*.pem
+secrets/
