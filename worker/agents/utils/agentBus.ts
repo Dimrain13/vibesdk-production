@@ -1,6 +1,6 @@
-import { StructuredLogger } from '../../../logger';
-import { ICodingAgent } from '../../services/interfaces/ICodingAgent';
-import { RenderToolCall } from '../../operations/UserConversationProcessor';
+import { StructuredLogger } from '../../logger';
+import { ICodingAgent } from '../services/interfaces/ICodingAgent';
+import { RenderToolCall } from '../operations/UserConversationProcessor';
 
 /**
  * Agent Communication Bus
@@ -265,19 +265,15 @@ export class AgentCommunicationBus {
 
 export class AgentCoordinator {
     private bus: AgentCommunicationBus;
-    private agent: ICodingAgent;
-    private logger: StructuredLogger;
     private toolRenderer: RenderToolCall;
     private streamCb: (chunk: string) => void;
 
     constructor(
-        agent: ICodingAgent,
+        _agent: ICodingAgent,
         logger: StructuredLogger,
         toolRenderer: RenderToolCall,
         streamCb: (chunk: string) => void,
     ) {
-        this.agent = agent;
-        this.logger = logger;
         this.toolRenderer = toolRenderer;
         this.streamCb = streamCb;
         this.bus = new AgentCommunicationBus(logger);
@@ -293,9 +289,8 @@ export class AgentCoordinator {
         // Detect what agents are needed
         const needsIntegration = /(?:api|integrat|stripe|supabase|auth|payment|database|prisma|drizzle)/i.test(lowerRequest);
         const needsDesign = /(?:design|style|ui|ux|theme|color|layout|responsive)/i.test(lowerRequest);
-        const needsBuilder = true; // Always need builder
 
-        // Step 0: Build the core feature
+        // Step 0: Always start with builder
         steps.push({
             agent: 'builder',
             task: userRequest,
