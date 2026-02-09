@@ -2,90 +2,55 @@
  * Smart Router
  * 
  * Routes requests to appropriate models based on complexity and cost.
+ * Updated to use actual model definitions from config.types.ts
+ * 
+ * REPLACES: utils/smartRouter.ts (stale GPT-4o references)
  */
 
-export type ModelTier = 'fast' | 'balanced' | 'powerful';
+import { AIModels, AI_MODEL_CONFIG, AIModelConfig, ModelSize } from '../inferutils/config.types';
 
-export interface ModelConfig {
-    name: string;
-    tier: ModelTier;
-    costPer1kTokens: number;
-    maxTokens: number;
-    capabilities: string[];
-}
+export type ModelTier = 'fast' | 'balanced' | 'powerful';
 
 export interface RoutingDecision {
     model: string;
     tier: ModelTier;
     reason: string;
-    estimatedCost: number;
+    estimatedCreditCost: number;
 }
 
-// Model configurations
-const MODELS: Record<string, ModelConfig> = {
-    'gpt-4o-mini': {
-        name: 'gpt-4o-mini',
-        tier: 'fast',
-        costPer1kTokens: 0.00015,
-        maxTokens: 16384,
-        capabilities: ['chat', 'simple_tasks', 'formatting'],
-    },
-    'gpt-4o': {
-        name: 'gpt-4o',
-        tier: 'balanced',
-        costPer1kTokens: 0.005,
-        maxTokens: 128000,
-        capabilities: ['chat', 'coding', 'analysis', 'complex_reasoning'],
-    },
-    'gpt-4-turbo': {
-        name: 'gpt-4-turbo',
-        tier: 'powerful',
-        costPer1kTokens: 0.01,
-        maxTokens: 128000,
-        capabilities: ['chat', 'coding', 'analysis', 'complex_reasoning', 'long_context'],
-    },
-};
+// Map model sizes to tiers
+function modelSizeToTier(size: ModelSize): ModelTier {
+    switch (size) {
+        case ModelSize.LITE: return 'fast';
+        case ModelSize.REGULAR: return 'balanced';
+        case ModelSize.LARGE: return 'powerful';
+        default: return 'balanced';
+    }
+}
 
 // Task complexity indicators
 const COMPLEX_INDICATORS = [
-    'debug',
-    'refactor',
-    'architect',
-    'design pattern',
-    'optimize',
-    'security',
-    'performance',
-    'algorithm',
-    'data structure',
+    'debug', 'refactor', 'architect', 'design pattern', 'optimize',
+    'security', 'performance', 'algorithm', 'data structure', 'migration',
+    'integration', 'authentication', 'oauth', 'webhook', 'database schema',
 ];
 
 const SIMPLE_INDICATORS = [
-    'format',
-    'rename',
-    'typo',
-    'comment',
-    'simple',
-    'quick',
-    'basic',
+    'format', 'rename', 'typo', 'comment', 'simple', 'quick', 'basic',
+    'style', 'color', 'text change', 'label',
 ];
 
 export class SmartRouter {
-    private _defaultTier: ModelTier = 'balanced';
-    private models: Record<string, ModelConfig>;
-
-    constructor(customModels?: Record<string, ModelConfig>) {
-        this.models = customModels ?? MODELS;
-    }
+    private defaultTier: ModelTier = 'balanced';
 
     /**
-     * Analyze task complexity
+     * Analyze task complexity and return a score 0-1
      */
     analyzeComplexity(task: string): { score: number; factors: string[] } {
         const lowerTask = task.toLowerCase();
         const factors: string[] = [];
-        let score = 0.5; // Start at medium
+        let score = 0.5;
 
-        // Check for complexity indicators
         for (const indicator of COMPLEX_INDICATORS) {
             if (lowerTask.includes(indicator)) {
                 score += 0.1;
@@ -93,7 +58,6 @@ export class SmartRouter {
             }
         }
 
-        // Check for simplicity indicators
         for (const indicator of SIMPLE_INDICATORS) {
             if (lowerTask.includes(indicator)) {
                 score -= 0.1;
@@ -101,7 +65,6 @@ export class SmartRouter {
             }
         }
 
-        // Check task length (longer = potentially more complex)
         if (task.length > 500) {
             score += 0.1;
             factors.push('Long task description');
@@ -110,19 +73,37 @@ export class SmartRouter {
             factors.push('Short task description');
         }
 
-        // Clamp score between 0 and 1
-        score = Math.max(0, Math.min(1, score));
+        return { score: Math.max(0, Math.min(1, score)), factors };
+    }
 
-        return { score, factors };
+    /**
+     * Get the best model for a given tier from actual registered models
+     */
+    private getModelForTier(tier: ModelTier): { modelId: string; config: AIModelConfig } | null {
+        const targetSize = tier === 'fast' ? ModelSize.LITE 
+            : tier === 'powerful' ? ModelSize.LARGE 
+            : ModelSize.REGULAR;
+
+        // Find the cheapest model in the target size category
+        let best: { modelId: string; config: AIModelConfig } | null = null;
+
+        for (const [modelId, config] of Object.entries(AI_MODEL_CONFIG)) {
+            if (config.size === targetSize) {
+                if (!best || config.creditCost < best.config.creditCost) {
+                    best = { modelId, config };
+                }
+            }
+        }
+
+        return best;
     }
 
     /**
      * Route a task to the appropriate model
      */
-    route(task: string, options?: { preferTier?: ModelTier; maxCost?: number }): RoutingDecision {
+    route(task: string, options?: { preferTier?: ModelTier; maxCreditCost?: number }): RoutingDecision {
         const { score, factors } = this.analyzeComplexity(task);
 
-        // Determine tier based on complexity
         let tier: ModelTier;
         if (options?.preferTier) {
             tier = options.preferTier;
@@ -134,69 +115,69 @@ export class SmartRouter {
             tier = 'balanced';
         }
 
-        // Find model for tier
-        const model = Object.values(this.models).find(m => m.tier === tier);
+        const model = this.getModelForTier(tier);
         if (!model) {
-            // Fallback to balanced
-            const fallback = Object.values(this.models).find(m => m.tier === 'balanced');
+            // Fallback
+            const fallback = this.getModelForTier('balanced');
             return {
-                model: fallback?.name ?? 'gpt-4o',
+                model: fallback?.modelId || AIModels.GEMINI_2_5_FLASH,
                 tier: 'balanced',
                 reason: 'Fallback to balanced tier',
-                estimatedCost: 0,
+                estimatedCreditCost: fallback?.config.creditCost || 1,
             };
         }
 
-        // Estimate cost (rough estimate based on task length)
-        const estimatedTokens = Math.ceil(task.length / 4) * 2; // Input + output estimate
-        const estimatedCost = (estimatedTokens / 1000) * model.costPer1kTokens;
-
         // Check cost constraint
-        if (options?.maxCost && estimatedCost > options.maxCost) {
-            // Downgrade to cheaper tier
-            const cheaperModel = Object.values(this.models)
-                .filter(m => m.costPer1kTokens < model.costPer1kTokens)
-                .sort((a, b) => b.costPer1kTokens - a.costPer1kTokens)[0];
-
-            if (cheaperModel) {
+        if (options?.maxCreditCost && model.config.creditCost > options.maxCreditCost) {
+            const cheaper = this.getModelForTier('fast');
+            if (cheaper && cheaper.config.creditCost <= options.maxCreditCost) {
                 return {
-                    model: cheaperModel.name,
-                    tier: cheaperModel.tier,
-                    reason: `Downgraded due to cost constraint (was ${tier})`,
-                    estimatedCost: (estimatedTokens / 1000) * cheaperModel.costPer1kTokens,
+                    model: cheaper.modelId,
+                    tier: 'fast',
+                    reason: `Downgraded from ${tier} due to cost constraint`,
+                    estimatedCreditCost: cheaper.config.creditCost,
                 };
             }
         }
 
         return {
-            model: model.name,
+            model: model.modelId,
             tier,
             reason: factors.length > 0 ? factors.join(', ') : 'Default routing',
-            estimatedCost,
+            estimatedCreditCost: model.config.creditCost,
         };
     }
 
     /**
-     * Get available models
+     * Get all available models grouped by tier
      */
-    getModels(): ModelConfig[] {
-        return Object.values(this.models);
+    getModelsByTier(): Record<ModelTier, Array<{ modelId: string; config: AIModelConfig }>> {
+        const result: Record<ModelTier, Array<{ modelId: string; config: AIModelConfig }>> = {
+            fast: [],
+            balanced: [],
+            powerful: [],
+        };
+
+        for (const [modelId, config] of Object.entries(AI_MODEL_CONFIG)) {
+            const tier = modelSizeToTier(config.size);
+            result[tier].push({ modelId, config });
+        }
+
+        // Sort each tier by cost
+        for (const tier of Object.keys(result) as ModelTier[]) {
+            result[tier].sort((a, b) => a.config.creditCost - b.config.creditCost);
+        }
+
+        return result;
     }
 
-    /**
-     * Set default tier
-     */
     setDefaultTier(tier: ModelTier): void {
-        this._defaultTier = tier;
+        this.defaultTier = tier;
     }
 
-    /**
-     * Get default tier
-     */
     getDefaultTier(): ModelTier {
-        return this._defaultTier;
+        return this.defaultTier;
     }
 }
 
-// Singleton instance
 export const smartRouter = new SmartRouter();

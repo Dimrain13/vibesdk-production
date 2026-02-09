@@ -37,7 +37,7 @@ import { createAskHumanTool } from '../tools/toolkit/ask-human';
 import { createFinishTool } from '../tools/toolkit/finish-tool';
 import { createTestingAgentTool } from '../tools/toolkit/testing-agent';
 import { createDesignAgentTool } from '../tools/toolkit/design-agent';
-import { createIntegrationPlaybookTool } from '../tools/toolkit/integration-playbook';
+import { createIntegrationAgentTool } from '../tools/toolkit/integration-agent';
 import { createTroubleshootAgentTool } from '../tools/toolkit/troubleshoot-agent';
 import { createSupportAgentTool } from '../tools/toolkit/support-agent';
 import { toolWebSearchDefinition } from '../tools/toolkit/web-search';
@@ -45,6 +45,9 @@ import { createCrawlTool } from '../tools/toolkit/crawl-tool';
 import { createScreenshotTool } from '../tools/toolkit/screenshot-tool';
 // Code quality tools
 import { createCodeReviewAgentTool } from '../tools/toolkit/code-review-agent';
+// QA validation + multi-agent coordinator
+import { createQAValidationTool } from '../tools/toolkit/qa-validation';
+import { createAgentCoordinatorTool } from '../tools/toolkit/agent-coordinator';
 
 export interface AgenticProjectBuilderInputs {
     query: string;
@@ -267,7 +270,7 @@ export class AgenticProjectBuilderOperation extends AgentOperationWithTools<
             // ===== E1 AGENT TOOLS (Specialized Sub-agents) =====
             createTestingAgentTool(session.agent, logger, toolRenderer, streamCb),
             createDesignAgentTool(session.agent, logger, toolRenderer, streamCb),
-            createIntegrationPlaybookTool(session.agent, logger, toolRenderer, streamCb),
+            createIntegrationAgentTool(session.agent, logger, toolRenderer, streamCb),
             createTroubleshootAgentTool(session.agent, logger, toolRenderer, streamCb),
             createSupportAgentTool(logger, toolRenderer, streamCb),
             
@@ -276,8 +279,14 @@ export class AgenticProjectBuilderOperation extends AgentOperationWithTools<
             
             // ===== E1 WEB/MEDIA TOOLS =====
             toolWebSearchDefinition, // Already a tool definition
-            createCrawlTool(logger, toolRenderer, streamCb),
+            createCrawlTool(logger, toolRenderer, streamCb, session.agent),
             createScreenshotTool(logger, toolRenderer, streamCb),
+
+            // ===== QA VALIDATION =====
+            createQAValidationTool(session.agent, logger, toolRenderer, streamCb),
+
+            // ===== MULTI-AGENT COORDINATOR =====
+            createAgentCoordinatorTool(session.agent, logger, toolRenderer, streamCb),
             
             // ===== CORE BUILD TOOLS =====
             // PRD generation + refinement
