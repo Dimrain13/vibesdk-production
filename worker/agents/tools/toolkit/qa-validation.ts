@@ -109,19 +109,19 @@ Much cheaper than a full debug cycle.`,
             streamCb('Checking file imports...\n');
             try {
                 const allFiles = agent.listFiles();
-                const filePaths = new Set(allFiles.map(f => f.path));
+                const filePaths = new Set(allFiles.map(f => f.filePath));
 
                 for (const file of allFiles) {
-                    if (!file.content) continue;
-                    if (!file.path.match(/\.(ts|tsx|js|jsx)$/)) continue;
+                    if (!file.fileContents) continue;
+                    if (!file.filePath.match(/\.(ts|tsx|js|jsx)$/)) continue;
 
                     // Check relative imports
                     const importPattern = /(?:from|import)\s+['"](\.[^'"]+)['"]/g;
                     let match;
-                    while ((match = importPattern.exec(file.content)) !== null) {
+                    while ((match = importPattern.exec(file.fileContents)) !== null) {
                         const importPath = match[1];
                         // Resolve relative to file directory
-                        const fileDir = file.path.split('/').slice(0, -1).join('/');
+                        const fileDir = file.filePath.split('/').slice(0, -1).join('/');
                         const resolved = resolveImportPath(fileDir, importPath);
 
                         // Check if any valid resolution exists
@@ -133,7 +133,7 @@ Much cheaper than a full debug cycle.`,
                                 category: 'import',
                                 severity: 'error',
                                 message: `Import "${importPath}" cannot be resolved`,
-                                file: file.path,
+                                file: file.filePath,
                                 fix: `Check that the imported file exists or update the import path`,
                             });
                         }
@@ -159,25 +159,25 @@ Much cheaper than a full debug cycle.`,
                     const definedEnvVars = new Set<string>();
 
                     for (const file of allFiles) {
-                        if (!file.content) continue;
+                        if (!file.fileContents) continue;
 
                         // Find env var references in code
-                        if (file.path.match(/\.(ts|tsx|js|jsx)$/)) {
+                        if (file.filePath.match(/\.(ts|tsx|js|jsx)$/)) {
                             const envPatterns = [
                                 /process\.env\.([A-Z_][A-Z0-9_]*)/g,
                                 /import\.meta\.env\.([A-Z_][A-Z0-9_]*)/g,
                             ];
                             for (const pattern of envPatterns) {
                                 let match;
-                                while ((match = pattern.exec(file.content)) !== null) {
+                                while ((match = pattern.exec(file.fileContents)) !== null) {
                                     referencedEnvVars.add(match[1]);
                                 }
                             }
                         }
 
                         // Find env var definitions in .env files
-                        if (file.path.match(/\.env/)) {
-                            const lines = file.content.split('\n');
+                        if (file.filePath.match(/\.env/)) {
+                            const lines = file.fileContents.split('\n');
                             for (const line of lines) {
                                 const envMatch = line.match(/^([A-Z_][A-Z0-9_]*)=/);
                                 if (envMatch) {
@@ -221,17 +221,17 @@ Much cheaper than a full debug cycle.`,
                     const calledRoutes = new Set<string>();
 
                     for (const file of allFiles) {
-                        if (!file.content) continue;
+                        if (!file.fileContents) continue;
 
                         // Backend route definitions (Express/Next.js patterns)
-                        if (file.path.match(/\/(api|routes|server)\//)) {
+                        if (file.filePath.match(/\/(api|routes|server)\//)) {
                             const routePatterns = [
                                 /(?:app|router)\.(get|post|put|patch|delete)\s*\(\s*['"]([^'"]+)['"]/g,
                                 /export\s+(?:async\s+)?function\s+(GET|POST|PUT|PATCH|DELETE)/g,
                             ];
                             for (const pattern of routePatterns) {
                                 let match;
-                                while ((match = pattern.exec(file.content)) !== null) {
+                                while ((match = pattern.exec(file.fileContents)) !== null) {
                                     if (match[2]) {
                                         definedRoutes.add(`${match[1].toUpperCase()} ${match[2]}`);
                                     }
@@ -240,10 +240,10 @@ Much cheaper than a full debug cycle.`,
                         }
 
                         // Frontend API calls
-                        if (file.path.match(/\.(ts|tsx|js|jsx)$/) && !file.path.includes('/api/')) {
+                        if (file.filePath.match(/\.(ts|tsx|js|jsx)$/) && !file.filePath.includes('/api/')) {
                             const fetchPattern = /fetch\s*\(\s*[`'"]([/][^'"`]+)[`'"]/g;
                             let match;
-                            while ((match = fetchPattern.exec(file.content)) !== null) {
+                            while ((match = fetchPattern.exec(file.fileContents)) !== null) {
                                 calledRoutes.add(match[1]);
                             }
                         }

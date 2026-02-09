@@ -290,22 +290,13 @@ async function extractWithLLM(
     title: string,
     text: string,
     question: string | undefined,
-    agent: ICodingAgent,
+    _agent: ICodingAgent,
     logger: StructuredLogger,
 ): Promise<CrawlStructuredResult> {
     try {
-        const focusClause = question
-            ? `\nFOCUS: The user specifically wants to know: "${question}". Prioritize extracting information relevant to this question.`
-            : '';
-
-        // Use agent.execCommands is not right — we need the generate approach
-        // Instead, we'll use the agent's generateFiles with a special extraction phase
-        // But actually, the cleanest approach is to return rich structured data
-        // by parsing the content with known patterns + the raw text for the calling agent to use
-
-        // For now, use enhanced regex extraction plus the raw content
+        // Use enhanced regex extraction plus the raw content.
         // The CALLING agent (integration_agent or agentic_builder) will have the LLM context
-        // to interpret this structured data
+        // to interpret this structured data.
         const regexResult = extractWithRegex(url, title, text, question);
 
         // Enhance with additional heuristic extraction
