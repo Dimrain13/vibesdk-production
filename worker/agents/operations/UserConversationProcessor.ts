@@ -155,26 +155,22 @@ When you need to use multiple tools, call them all in a single response. The sys
         **CRITICAL: Always include deployment instructions:**
         When generating API integration code, ALWAYS tell users:
         
-        1. **For local development (.env.local file):**
-           ```
+        1. For local development (.env.local file):
            Create a .env.local file in your project root:
            VITE_API_KEY=your_key_here
            VITE_API_SECRET=your_secret_here
-           ```
         
-        2. **For Cloudflare Workers deployment:**
-           ```
+        2. For Cloudflare Workers deployment:
            Set secrets using wrangler CLI:
-           wrangler secret put API_KEY
-           wrangler secret put API_SECRET
+           - wrangler secret put API_KEY
+           - wrangler secret put API_SECRET
            
            Or via Cloudflare Dashboard:
            - Go to Workers & Pages → Your Worker → Settings → Variables
            - Add Environment Variables (for VITE_* vars)
            - Add Secrets (for sensitive keys)
-           ```
         
-        3. **For deployed apps (sandbox/preview):**
+        3. For deployed apps (sandbox/preview):
            Tell users: "Note: Environment variables need to be set in the deployment environment. 
            Export your project and deploy with your own API keys, or use Cloudflare Workers secrets."
 
