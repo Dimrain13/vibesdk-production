@@ -19,6 +19,7 @@ import { createGetRuntimeErrorsTool } from './toolkit/get-runtime-errors';
 import { createWaitForGenerationTool } from './toolkit/wait-for-generation';
 import { createWaitForDebugTool } from './toolkit/wait-for-debug';
 import { createGitTool } from './toolkit/git';
+import { createCrawlTool } from './toolkit/crawl-tool';
 import { ICodingAgent } from '../services/interfaces/ICodingAgent';
 import { Message } from '../inferutils/common';
 import { ChatCompletionMessageFunctionToolCall } from 'openai/resources';
@@ -57,6 +58,8 @@ export function buildTools(
         createAlterBlueprintTool(agent, logger),
         // Git tool (safe version - no reset for user conversations)
         createGitTool(agent, logger, { excludeCommands: ['reset'] }),
+        // Web crawling/scraping tool for fetching and parsing web content
+        createCrawlTool(logger, toolRenderer, streamCb, agent),
         // Deep autonomous debugging assistant tool
         createDeepDebuggerTool(agent, logger, toolRenderer, streamCb),
     ];

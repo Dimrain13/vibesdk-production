@@ -123,6 +123,7 @@ When users express frustration: acknowledge the issue, skip apologies ("You're r
   - rename_project: Rename the project (lowercase letters, numbers, hyphens, underscores; 3-50 chars).
   - alter_blueprint: Patch the blueprint with allowed fields only (title, description, views, userFlow, frameworks, etc.).
   - web_search: Search the web for information.
+  - crawl_tool: Fetch and extract structured content from webpages (code examples, API endpoints, env vars). Use to scrape API documentation or extract implementation guides. Can lookup docs by service name (e.g., "stripe", "plaid", "supabase") or crawl any public URL.
   - feedback: Submit user feedback to the platform.
 
 ## EFFICIENT TOOL USAGE:
