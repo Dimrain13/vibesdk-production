@@ -338,7 +338,7 @@ COMMON_PITFALLS: `<AVOID COMMON PITFALLS>
 
     **FRAMEWORK & SYNTAX SPECIFICS:**
     •   Framework compatibility: Pay attention to version differences (Tailwind v3 vs v4, React Router versions)
-    •   No environment variables: App deploys serverless - avoid libraries requiring env vars unless they support defaults
+    •   **Environment Variables for API Keys:** When integrating third-party APIs (Plaid, Stripe, OpenAI, Supabase, etc), ALWAYS use environment variables via \`import.meta.env\` for Vite apps or \`process.env\` for Node/Workers. Example: \`const apiKey = import.meta.env.VITE_PLAID_CLIENT_ID\`. Never hardcode API keys. Always provide setup instructions in comments explaining which env vars are needed and where to get the API credentials. Common pattern: create a \`.env.local\` file with keys prefixed with \`VITE_\` for client-side access.
     •   React/Vite best practices: Follow patterns compatible with Vite + React (avoid Next.js-specific APIs)
     •   Tailwind classes: Verify all classes exist in tailwind.config.js (e.g., avoid undefined classes like \`border-border\`)
     •   Component exports: Export all components properly, avoid mixing default/named imports
@@ -424,6 +424,444 @@ COMMON_PITFALLS: `<AVOID COMMON PITFALLS>
 
     # Never write image files! Never write jpeg, png, svg, etc files yourself! Always use some image url from the web.
     **Do not recommend installing \`cloudflare:workers\` or \`cloudflare:durable-objects\` as dependencies, these are already installed in the project always.**
+
+
+    **API INTEGRATION BEST PRACTICES:**
+    When implementing third-party API integrations (Plaid, Stripe, OpenAI, Supabase, SendGrid, Twilio, etc.):
+    
+    **CRITICAL RULES:**
+    1. **ALWAYS use environment variables** - NEVER hardcode API keys
+    2. **Use proper env var syntax:**
+       - Vite/React apps: \`import.meta.env.VITE_API_KEY\`
+       - Node/Workers: \`process.env.API_KEY\`
+       - Prefix with \`VITE_\` for client-side access in Vite
+    3. **ALWAYS provide setup instructions** in code comments
+    4. **ALWAYS include error handling** with try-catch
+    5. **ALWAYS validate responses** before using data
+    
+    **SETUP INSTRUCTIONS TEMPLATE:**
+    Add comments like this in your API client code:
+    \`\`\`typescript
+    /*
+    SETUP INSTRUCTIONS:
+    1. Sign up at https://[service].com
+    2. Get API credentials from dashboard
+    3. Create .env.local file in project root
+    4. Add these variables:
+       VITE_API_KEY=your_key_here
+       VITE_API_SECRET=your_secret_here
+    5. Restart dev server
+    
+    Documentation: https://[service].com/docs
+    */
+    \`\`\`
+    
+    **COMMON APIs - Implementation Patterns:**
+    
+    • **Plaid (Banking/Financial Data):**
+    \`\`\`typescript
+    const plaidClient = async () => {
+      const response = await fetch('https://sandbox.plaid.com/link/token/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: import.meta.env.VITE_PLAID_CLIENT_ID,
+          secret: import.meta.env.VITE_PLAID_SECRET,
+          user: { client_user_id: 'user-id' },
+          products: ['transactions'],
+          country_codes: ['US']
+        })
+      });
+      return response.json();
+    };
+    // Env vars needed: VITE_PLAID_CLIENT_ID, VITE_PLAID_SECRET
+    \`\`\`
+    
+    • **Stripe (Payments):**
+    \`\`\`typescript
+    const createPayment = async (amount: number) => {
+      const response = await fetch('https://api.stripe.com/v1/payment_intents', {
+        method: 'POST',
+        headers: {
+          'Authorization': \`Bearer \${import.meta.env.VITE_STRIPE_SECRET_KEY}\`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({ amount: amount.toString(), currency: 'usd' })
+      });
+      return response.json();
+    };
+    // Env vars needed: VITE_STRIPE_SECRET_KEY, VITE_STRIPE_PUBLISHABLE_KEY
+    \`\`\`
+    
+    • **OpenAI (AI):**
+    \`\`\`typescript
+    const chat = async (prompt: string) => {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': \`Bearer \${import.meta.env.VITE_OPENAI_API_KEY}\`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'gpt-4',
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      return response.json();
+    };
+    // Env var needed: VITE_OPENAI_API_KEY
+    \`\`\`
+    
+    • **Supabase (Database):**
+    \`\`\`typescript
+    import { createClient } from '@supabase/supabase-js';
+    
+    const supabase = createClient(
+      import.meta.env.VITE_SUPABASE_URL,
+      import.meta.env.VITE_SUPABASE_ANON_KEY
+    );
+    // Env vars needed: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
+    \`\`\`
+    
+    **ERROR HANDLING PATTERN:**
+    \`\`\`typescript
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const response = await fetch(apiUrl, options);
+        
+        if (!response.ok) {
+          throw new Error(\`API error: \${response.status} \${response.statusText}\`);
+        }
+        
+        const result = await response.json();
+        setData(result);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+        console.error('API Error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    \`\`\`
+    
+    **WEB SCRAPING - Professional Tools & Patterns:**
+    
+    For web scraping, use these JavaScript/TypeScript libraries (equivalents to Python's Beautiful Soup):
+    
+    **RECOMMENDED APPROACH - Choose based on complexity:**
+    
+    1. **Cheerio (BEST for static HTML - like Beautiful Soup for JS)**
+       - Fast, server-side jQuery-like syntax
+       - Perfect for scraping static websites
+       - Install: \`bun add cheerio\`
+       - Use when: Site doesn't require JavaScript rendering
+    
+    2. **Puppeteer (BEST for dynamic content)**
+       - Full Chrome browser automation
+       - Handles JavaScript-rendered content
+       - Install: \`bun add puppeteer\`
+       - Use when: Site uses React/Vue/dynamic rendering
+    
+    3. **Playwright (BEST for complex scraping)**
+       - Multi-browser support (Chrome, Firefox, Safari)
+       - Better API than Puppeteer
+       - Install: \`bun add playwright\`
+       - Use when: Need cross-browser or advanced automation
+    
+    4. **JSDOM (BEST for Node.js environments)**
+       - Full DOM implementation
+       - Install: \`bun add jsdom\`
+       - Use when: Need full DOM APIs without browser
+    
+    5. **Axios + Cheerio (BEST general-purpose combo)**
+       - Axios for HTTP, Cheerio for parsing
+       - Install: \`bun add axios cheerio\`
+       - Most versatile approach
+    
+    **PATTERN 1 - Static HTML Scraping (Cheerio - Like Beautiful Soup):**
+    \`\`\`typescript
+    import * as cheerio from 'cheerio';
+    import axios from 'axios';
+    
+    interface ScrapedProduct {
+      title: string;
+      price: string;
+      url: string;
+      image?: string;
+    }
+    
+    const scrapeProducts = async (url: string): Promise<ScrapedProduct[]> => {
+      try {
+        // Fetch HTML
+        const { data } = await axios.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        });
+        
+        // Load into Cheerio
+        const $ = cheerio.load(data);
+        
+        // Extract data (jQuery-like selectors)
+        const products: ScrapedProduct[] = [];
+        
+        $('.product-card').each((index, element) => {
+          const $el = $(element);
+          
+          products.push({
+            title: $el.find('.product-title').text().trim(),
+            price: $el.find('.product-price').text().trim(),
+            url: $el.find('a').attr('href') || '',
+            image: $el.find('img').attr('src')
+          });
+        });
+        
+        return products;
+      } catch (error) {
+        console.error('Scraping error:', error);
+        throw error;
+      }
+    };
+    
+    // Usage:
+    const products = await scrapeProducts('https://example.com/products');
+    \`\`\`
+    
+    **PATTERN 2 - Dynamic Content Scraping (Puppeteer):**
+    \`\`\`typescript
+    import puppeteer from 'puppeteer';
+    
+    const scrapeDynamicSite = async (url: string) => {
+      const browser = await puppeteer.launch({ 
+        headless: true,
+        args: ['--no-sandbox'] 
+      });
+      
+      const page = await browser.newPage();
+      
+      try {
+        // Navigate to page
+        await page.goto(url, { waitUntil: 'networkidle2' });
+        
+        // Wait for dynamic content to load
+        await page.waitForSelector('.product-card');
+        
+        // Extract data from rendered page
+        const products = await page.evaluate(() => {
+          const items = document.querySelectorAll('.product-card');
+          return Array.from(items).map(item => ({
+            title: item.querySelector('.product-title')?.textContent?.trim(),
+            price: item.querySelector('.product-price')?.textContent?.trim(),
+            url: item.querySelector('a')?.href
+          }));
+        });
+        
+        return products;
+      } finally {
+        await browser.close();
+      }
+    };
+    \`\`\`
+    
+    **PATTERN 3 - Advanced Scraping with Pagination:**
+    \`\`\`typescript
+    import * as cheerio from 'cheerio';
+    import axios from 'axios';
+    
+    const scrapeAllPages = async (baseUrl: string, maxPages: number = 10) => {
+      const allData: any[] = [];
+      
+      for (let page = 1; page <= maxPages; page++) {
+        const url = \`\${baseUrl}?page=\${page}\`;
+        
+        const { data } = await axios.get(url);
+        const $ = cheerio.load(data);
+        
+        // Check if page has content
+        const items = $('.item');
+        if (items.length === 0) break;
+        
+        // Extract items
+        items.each((i, el) => {
+          allData.push({
+            title: $(el).find('.title').text().trim(),
+            link: $(el).find('a').attr('href')
+          });
+        });
+        
+        // Rate limiting
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
+      return allData;
+    };
+    \`\`\`
+    
+    **PATTERN 4 - Handling Authentication/Cookies:**
+    \`\`\`typescript
+    import axios from 'axios';
+    import * as cheerio from 'cheerio';
+    
+    const scrapeWithAuth = async (loginUrl: string, targetUrl: string) => {
+      // Create axios instance with cookie jar
+      const axiosInstance = axios.create({
+        withCredentials: true,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+        }
+      });
+      
+      // Login first
+      await axiosInstance.post(loginUrl, {
+        username: import.meta.env.VITE_SCRAPER_USERNAME,
+        password: import.meta.env.VITE_SCRAPER_PASSWORD
+      });
+      
+      // Now scrape protected content
+      const { data } = await axiosInstance.get(targetUrl);
+      const $ = cheerio.load(data);
+      
+      return $('.protected-content').text();
+    };
+    \`\`\`
+    
+    **PATTERN 5 - Scraping with Proxy (Avoid Rate Limits):**
+    \`\`\`typescript
+    import axios from 'axios';
+    
+    const scrapeWithProxy = async (url: string) => {
+      const { data } = await axios.get(url, {
+        proxy: {
+          host: import.meta.env.VITE_PROXY_HOST,
+          port: parseInt(import.meta.env.VITE_PROXY_PORT),
+          auth: {
+            username: import.meta.env.VITE_PROXY_USER,
+            password: import.meta.env.VITE_PROXY_PASS
+          }
+        }
+      });
+      
+      return data;
+    };
+    \`\`\`
+    
+    **PATTERN 6 - Playwright for Complex Sites:**
+    \`\`\`typescript
+    import { chromium } from 'playwright';
+    
+    const scrapeWithPlaywright = async (url: string) => {
+      const browser = await chromium.launch();
+      const page = await browser.newPage();
+      
+      await page.goto(url);
+      
+      // Handle infinite scroll
+      await page.evaluate(async () => {
+        await new Promise((resolve) => {
+          let totalHeight = 0;
+          const distance = 100;
+          const timer = setInterval(() => {
+            window.scrollBy(0, distance);
+            totalHeight += distance;
+            
+            if (totalHeight >= document.body.scrollHeight) {
+              clearInterval(timer);
+              resolve(true);
+            }
+          }, 100);
+        });
+      });
+      
+      // Extract data
+      const data = await page.$$eval('.item', items => 
+        items.map(item => ({
+          text: item.textContent,
+          html: item.innerHTML
+        }))
+      );
+      
+      await browser.close();
+      return data;
+    };
+    \`\`\`
+    
+    **CHEERIO QUICK REFERENCE (Beautiful Soup for JS):**
+    \`\`\`typescript
+    const $ = cheerio.load(html);
+    
+    // Selectors (like CSS selectors)
+    $('.class')              // Select by class
+    $('#id')                 // Select by ID
+    $('div.class')          // Element + class
+    $('div > p')            // Direct children
+    $('div p')              // All descendants
+    $('[data-id="123"]')    // Attribute selector
+    
+    // Extracting data
+    $el.text()              // Get text content
+    $el.html()              // Get HTML
+    $el.attr('href')        // Get attribute
+    $el.data('value')       // Get data attribute
+    $el.hasClass('active')  // Check class
+    
+    // Traversal
+    $el.parent()            // Parent element
+    $el.children()          // Direct children
+    $el.find('.child')      // Find descendants
+    $el.next()              // Next sibling
+    $el.prev()              // Previous sibling
+    
+    // Iteration
+    $('.items').each((i, el) => {
+      const $item = $(el);
+      console.log($item.text());
+    });
+    
+    // Map to array
+    const items = $('.item').map((i, el) => $(el).text()).get();
+    \`\`\`
+    
+    **WEB SCRAPING BEST PRACTICES:**
+    1. **Always add User-Agent header** - Many sites block requests without it
+    2. **Respect robots.txt** - Check site's scraping policy
+    3. **Rate limiting** - Add delays between requests (1-3 seconds)
+    4. **Error handling** - Wrap in try-catch, handle network errors
+    5. **Data validation** - Check if selectors returned data
+    6. **Proxy rotation** - For large-scale scraping
+    7. **Caching** - Store results to avoid re-scraping
+    8. **Legal compliance** - Only scrape publicly available data
+    
+    **INSTALLATION COMMANDS:**
+    \`\`\`sh
+    # Basic scraping
+    bun add cheerio axios
+    
+    # Dynamic content
+    bun add puppeteer
+    
+    # Advanced automation
+    bun add playwright
+    
+    # Complete toolkit
+    bun add cheerio axios puppeteer jsdom
+    \`\`\`
+    
+    **SECURITY CHECKLIST:**
+    - [ ] All API keys use environment variables
+    - [ ] No hardcoded credentials in code
+    - [ ] Setup instructions provided in comments
+    - [ ] Error handling with try-catch
+    - [ ] Response validation before using data
+    - [ ] HTTPS endpoints only
+    - [ ] Rate limiting considered
+    - [ ] User input sanitized before sending to APIs
 
 </AVOID COMMON PITFALLS>`,
     COMMON_DEP_DOCUMENTATION: `<COMMON DEPENDENCY DOCUMENTATION>
